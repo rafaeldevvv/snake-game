@@ -59,25 +59,52 @@ class Snake {
   }
 }
 
-class Food {
-  constructor(x, y) {
-    this.position = { x, y };
+class FoodGenerator {
+  constructor() {
+    this.foodTypes = [];
+  }
+
+  register(piece) {
+    this.foodTypes.push(piece);
+  }
+
+  generateFood() {
+    const numberOfPieces = this.foodTypes.length;
+    if (numberOfPieces === 0) {
+      throw new Error("No food registered");
+    }
+
+    return {...this.foodTypes[Math.floor(Math.random() * numberOfPieces)]};
+  }
+}
+
+class FoodType {
+  constructor(type, score, imagePath) {
+    this.type = type;
+    this.score = score;
+    this.imagePath = imagePath;
   }
 
   collide(state) {
-    const filtered = state.food.filter((piece) => piece !== this);
-    const newSnake = state.snake.increase();
-    const newScore = state.score + 1;
-    
-    return new State(newSnake, state.boundaries, filtered, newScore);
+    const snake = state.snake;
+    const longerSnake = snake.increase();
+
+    return new State(
+      longerSnake,
+      state.food.filter(f => f !== this),
+      state.score + this.score,
+      state.status,
+      state.boundaries
+    );
   }
 }
 
 class State {
-  constructor(snake, boundaries, food, score) {
+  constructor(snake, food, score, status, boundaries) {
     this.snake = snake;
     this.food = food;
     this.score = score;
+    this.status = status;
     this.boundaries = boundaries;
   }
 
@@ -91,7 +118,7 @@ class State {
       new Vec(2, 0)
     );
 
-    return new State(firstSnake, boundaries, [], 0);
+    return new State(firstSnake, [], 0, "playing", boundaries);
   }
 
   update(time, keys) {
@@ -104,13 +131,25 @@ class State {
     const limitX = this.boundaries.x;
     const limitY = this.boundaries.y;
 
-    if (snakeX > limitX || snakeY > limitY || snakeX < 0 || snakeY < 0) {
-      return new State(newSnake, this.boundaries, this.food, this.score);
+    if (snakeX >= limitX || snakeY >= limitY || snakeX < 0 || snakeY < 0) {
+      return new State(
+        newSnake,
+        this.food,
+        this.score,
+        "lost",
+        this.boundaries
+      );
     }
 
     // snake collision
     if (this.snake.tail.some((part) => overlap(part, newSnake.head))) {
-      return new State(newSnake, this.boundaries, this.food, this.score);
+      return new State(
+        newSnake,
+        this.food,
+        this.score,
+        "lost",
+        this.boundaries
+      );
     }
 
     // fruit collision
@@ -145,6 +184,7 @@ class CanvasDisplay {
   }
 
   syncState(state) {
+    // draw background
     // draw snake
     // draw food
     // show score
@@ -160,6 +200,11 @@ function trackKeys(keyNames) {
   }
   window.addEventListener("keydown", track);
   window.addEventListener("keyup", track);
+
+  down.unregister = function () {
+    window.removeEventListener("keydown", track);
+    window.removeEventListener("keyup", track);
+  };
 
   return down;
 }
@@ -179,15 +224,21 @@ function runGame() {
   const display = new CanvasDisplay(30, 20);
   document.body.appendChild(display.dom);
 
-  const keys = trackKeys(["ArrowDown", "ArrowUp", "ArrowLeft", "ArrowRight"]);
+  const arrowKeys = trackKeys([
+    "ArrowDown",
+    "ArrowUp",
+    "ArrowLeft",
+    "ArrowRight",
+  ]);
 
   runAnimation((timeStep) => {
-    state = state.update(timeStep, keys);
+    state = state.update(timeStep, arrowKeys);
 
     if (state.status === "playing") {
       display.syncState(state);
       return true;
     } else {
+      arrowKeys.unregister();
       return false;
     }
   });
