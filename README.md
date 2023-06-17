@@ -112,13 +112,13 @@ class State {
 }
 ```
 
-The `update()` method is also responsible for checking if the snake's head is a valid position and if any piece of food has been collected.
+The `update()` method is also responsible for checking if the snake's head is in a valid position and if any piece of food has been collected.
 
 The `collide()` method provided by the piece of food object updates the length of the snake.
 
 ### Display
 
-I used the canvas api to make this game because I planned to give the snake a pixel-art style skin and I would also make the fruits in pixel-art style.
+I used the canvas api to render this game because I planned to give the snake a pixel-art style skin and I would also make the fruits in pixel-art style. 
 
 This class has a `syncState()` method that gets a given state and renders it.
 

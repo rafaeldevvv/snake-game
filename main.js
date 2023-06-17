@@ -39,9 +39,36 @@ class Snake {
 
   update(time, keys) {
     // update direction based on keys
+    let newSpeed = this.speed;
+    if (keys.ArrowDown && this.head.direction !== "down") {
+      newSpeed = new Vec(0, 2);
+    }
+    if (keys.ArrowUp && this.head.direction !== "up") {
+      newSpeed = new Vec(0, -2);
+    }
+    if (keys.ArrowLeft && this.head.direction !== "left") {
+      newSpeed = new Vec(-2, 0);
+    }
+    if (keys.ArrowRight && this.head.direction !== "right") {
+      newSpeed = new Vec(2, 0);
+    }
+
     // update head position based on direction
+    let newHeadPosition = this.head.position.plus(newSpeed.times(time));
+    let previousHeadPosition = this.head.position;
+
     // update the tail positions based on what the previous ones were
+    const newTail = [previousHeadPosition, ...this.tail];
+    newTail.pop();
+
     // return new Snake
+    return new Snake(
+      {
+        position: newHeadPosition,
+      },
+      newTail,
+      newSpeed
+    );
   }
 
   increase() {
@@ -74,7 +101,7 @@ class FoodGenerator {
       throw new Error("No food registered");
     }
 
-    return {...this.foodTypes[Math.floor(Math.random() * numberOfPieces)]};
+    return { ...this.foodTypes[Math.floor(Math.random() * numberOfPieces)] };
   }
 }
 
@@ -91,7 +118,7 @@ class FoodType {
 
     return new State(
       longerSnake,
-      state.food.filter(f => f !== this),
+      state.food.filter((f) => f !== this),
       state.score + this.score,
       state.status,
       state.boundaries
@@ -112,7 +139,6 @@ class State {
     const firstSnake = new Snake(
       {
         position: new Vec(0, 0),
-        direction: "right",
       },
       [],
       new Vec(2, 0)
@@ -172,6 +198,15 @@ function overlap(actor1, actor2) {
   );
 }
 
+function drawChessBackground(context, width, height, color1, color2) {
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      context.fillStyle = (x + y) % 2 === 0 ? color1 : color2;
+      context.fillRect(x * scale, y * scale, scale, scale);
+    }
+  }
+}
+
 class CanvasDisplay {
   constructor(width, height) {
     this.dom = elt("canvas", {
@@ -184,10 +219,30 @@ class CanvasDisplay {
   }
 
   syncState(state) {
+    const cx = this.dom.getContext("2d");
+
+    cx.clearRect(0, 0, this.width * scale, this.height * scale);
+
     // draw background
+    drawChessBackground(cx, this.width, this.height, "00ff00", "00f000");
+
     // draw snake
+    const snakeParts = [state.snake.head, ...state.snake.tail];
+    cx.fillStyle = "black";
+    for (const part of snakeParts) {
+      const { x, y } = part.position;
+      cx.fillRect(x * scale, y * scale, scale, scale);
+    }
+
     // draw food
+    for (const piece of state.food) {
+      const { x, y } = piece.position;
+      cx.fillStyle = piece.color;
+      cx.fillRect(x * scale, y * scale, scale, scale);
+    }
+
     // show score
+    cx.fillText("Score: " + state.score, scale, scale);
   }
 }
 
@@ -219,6 +274,18 @@ function runAnimation(frameFunction) {
   requestAnimationFrame(frame);
 }
 
+const colors = ["red", "yellow", "orange"];
+
+function getRandomFood(limitX, limitY) {
+  return {
+    position: {
+      x: Math.floor(Math.random() * limitX),
+      y: Math.floor(Math.random() * limitY),
+    },
+    color: colors[Math.floor(Math.random() * colors.length)],
+  };
+}
+
 function runGame() {
   let state = State.start({ x: 30, y: 20 });
   const display = new CanvasDisplay(30, 20);
@@ -233,6 +300,10 @@ function runGame() {
 
   runAnimation((timeStep) => {
     state = state.update(timeStep, arrowKeys);
+
+    if (state.food.length < 3) {
+      state.food.push(getRandomFood(30, 20));
+    }
 
     if (state.status === "playing") {
       display.syncState(state);
