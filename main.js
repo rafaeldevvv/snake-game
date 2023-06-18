@@ -33,12 +33,11 @@ class Vec {
 const snakeSpeed = 10;
 
 class Snake {
-  constructor(head, tail, speed, length, positions) {
+  constructor(head, tail, speed, lastHeadPosition) {
     this.head = head;
     this.tail = tail; // the closer it is to the beginning of the array, the closer it is to the head
     this.speed = speed;
-    this.length = length;
-    this.positions = positions;
+    this.lastHeadPosition = lastHeadPosition;
   }
 
   update(time, keys) {
