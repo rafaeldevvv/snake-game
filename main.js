@@ -1,7 +1,7 @@
-const scale = 10;
+const scale = 15;
 
-function elt(type, attrs, children) {
-  const domElement = document.querySelector(type);
+function elt(type, attrs, ...children) {
+  const domElement = document.createElement(type);
   if (attrs) Object.assign(domElement, attrs);
 
   for (const child of children) {
@@ -30,86 +30,69 @@ class Vec {
   }
 }
 
+const snakeSpeed = 10;
+
 class Snake {
-  constructor(head, tail, speed) {
+  constructor(head, tail, speed, length, positions) {
     this.head = head;
     this.tail = tail; // the closer it is to the beginning of the array, the closer it is to the head
     this.speed = speed;
+    this.length = length;
+    this.positions = positions;
   }
 
   update(time, keys) {
     // update direction based on keys
-    let newSpeed = this.speed;
-    if (keys.ArrowDown && this.head.direction !== "down") {
-      newSpeed = new Vec(0, 2);
+    let speed = this.speed;
+    if (keys.ArrowDown && this.speed.y === 0) {
+      speed = new Vec(0, snakeSpeed);
     }
-    if (keys.ArrowUp && this.head.direction !== "up") {
-      newSpeed = new Vec(0, -2);
+    if (keys.ArrowUp && this.speed.y === 0) {
+      speed = new Vec(0, -snakeSpeed);
     }
-    if (keys.ArrowLeft && this.head.direction !== "left") {
-      newSpeed = new Vec(-2, 0);
+    if (keys.ArrowLeft && this.speed.x === 0) {
+      speed = new Vec(-snakeSpeed, 0);
     }
-    if (keys.ArrowRight && this.head.direction !== "right") {
-      newSpeed = new Vec(2, 0);
+    if (keys.ArrowRight && this.speed.x === 0) {
+      speed = new Vec(snakeSpeed, 0);
     }
 
     // update head position based on direction
-    let newHeadPosition = this.head.position.plus(newSpeed.times(time));
-    let previousHeadPosition = this.head.position;
+    let previousHeadPosition = this.lastHeadPosition;
+    const newHeadPosition = this.head.position.plus(speed.times(time));
+
+    if (
+      Math.floor(newHeadPosition.x) !== Math.floor(this.head.position.x) ||
+      Math.floor(newHeadPosition.y) !== Math.floor(this.head.position.y)
+    ) {
+      previousHeadPosition = this.head.position;
+    }
+
+    const newHead = {
+      position: newHeadPosition,
+    };
 
     // update the tail positions based on what the previous ones were
-    const newTail = [previousHeadPosition, ...this.tail];
+    const newTail = [{ position: previousHeadPosition }, ...this.tail];
+
     newTail.pop();
 
     // return new Snake
-    return new Snake(
-      {
-        position: newHeadPosition,
-      },
-      newTail,
-      newSpeed
-    );
+    return new Snake(newHead, newTail, speed, previousHeadPosition);
   }
 
   increase() {
-    const lastPart = this.tail[this.tail.length - 1];
-
     const newTail = this.tail.slice();
-    newTail.push({
-      position: {
-        x: lastPart.position.x,
-        y: lastPart.position.y,
-      },
-    });
+    newTail.unshift({ position: this.lastHeadPosition });
 
-    return new Snake(this.head, newTail, this.speed);
+    return new Snake(this.head, newTail, this.speed, this.lastHeadPosition);
   }
 }
 
-class FoodGenerator {
-  constructor() {
-    this.foodTypes = [];
-  }
-
-  register(piece) {
-    this.foodTypes.push(piece);
-  }
-
-  generateFood() {
-    const numberOfPieces = this.foodTypes.length;
-    if (numberOfPieces === 0) {
-      throw new Error("No food registered");
-    }
-
-    return { ...this.foodTypes[Math.floor(Math.random() * numberOfPieces)] };
-  }
-}
-
-class FoodType {
-  constructor(type, score, imagePath) {
-    this.type = type;
-    this.score = score;
-    this.imagePath = imagePath;
+class Food {
+  constructor(x, y, color) {
+    this.position = { x, y };
+    this.color = color;
   }
 
   collide(state) {
@@ -119,7 +102,7 @@ class FoodType {
     return new State(
       longerSnake,
       state.food.filter((f) => f !== this),
-      state.score + this.score,
+      state.score + (this.score || 1),
       state.status,
       state.boundaries
     );
@@ -141,7 +124,8 @@ class State {
         position: new Vec(0, 0),
       },
       [],
-      new Vec(2, 0)
+      new Vec(snakeSpeed, 0),
+      new Vec(0, 0)
     );
 
     return new State(firstSnake, [], 0, "playing", boundaries);
@@ -157,8 +141,16 @@ class State {
     const limitX = this.boundaries.x;
     const limitY = this.boundaries.y;
 
+    let newState = new State(
+      newSnake,
+      this.food,
+      this.score,
+      this.status,
+      this.boundaries
+    );
+
     if (snakeX >= limitX || snakeY >= limitY || snakeX < 0 || snakeY < 0) {
-      return new State(
+      newState = new State(
         newSnake,
         this.food,
         this.score,
@@ -169,7 +161,7 @@ class State {
 
     // snake collision
     if (this.snake.tail.some((part) => overlap(part, newSnake.head))) {
-      return new State(
+      newState = new State(
         newSnake,
         this.food,
         this.score,
@@ -179,9 +171,8 @@ class State {
     }
 
     // fruit collision
-    let newState = this;
     for (const piece of this.food) {
-      if (overlap(piece, newSnake)) {
+      if (overlap(piece, newSnake.head)) {
         newState = piece.collide(newState);
       }
     }
@@ -221,27 +212,27 @@ class CanvasDisplay {
   syncState(state) {
     const cx = this.dom.getContext("2d");
 
-    cx.clearRect(0, 0, this.width * scale, this.height * scale);
-
     // draw background
-    drawChessBackground(cx, this.width, this.height, "00ff00", "00f000");
+    drawChessBackground(cx, this.width, this.height, "#00ff00", "#00f000");
 
     // draw snake
     const snakeParts = [state.snake.head, ...state.snake.tail];
+    console.log(snakeParts);
     cx.fillStyle = "black";
     for (const part of snakeParts) {
       const { x, y } = part.position;
-      cx.fillRect(x * scale, y * scale, scale, scale);
+      cx.fillRect(Math.floor(x) * scale, Math.floor(y) * scale, scale, scale);
     }
 
     // draw food
     for (const piece of state.food) {
       const { x, y } = piece.position;
       cx.fillStyle = piece.color;
-      cx.fillRect(x * scale, y * scale, scale, scale);
+      cx.fillRect(Math.floor(x) * scale, Math.floor(y) * scale, scale, scale);
     }
 
     // show score
+    cx.fillStyle = "black";
     cx.fillText("Score: " + state.score, scale, scale);
   }
 }
@@ -265,25 +256,30 @@ function trackKeys(keyNames) {
 }
 
 function runAnimation(frameFunction) {
-  let lastTime = performance.now();
+  let lastTime = null;
   function frame(newTime) {
-    const timePassed = Math.min(100, newTime - lastTime) / 1000;
+    if (lastTime != null) {
+      const timePassed = Math.min(100, newTime - lastTime) / 1000;
+      if (frameFunction(timePassed) === false) return;
+    }
     lastTime = newTime;
-    if (frameFunction(timePassed) === true) requestAnimationFrame(frame);
+    requestAnimationFrame(frame);
   }
   requestAnimationFrame(frame);
 }
 
-const colors = ["red", "yellow", "orange"];
+const colors = ["red", "yellow", "orange", "blue", "lightblue", "purple"];
+
+function getRandomNumber(min, max) {
+  return min + (max - min) * Math.random();
+}
 
 function getRandomFood(limitX, limitY) {
-  return {
-    position: {
-      x: Math.floor(Math.random() * limitX),
-      y: Math.floor(Math.random() * limitY),
-    },
-    color: colors[Math.floor(Math.random() * colors.length)],
-  };
+  return new Food(
+    Math.floor(getRandomNumber(0, limitX)),
+    Math.floor(getRandomNumber(0, limitY)),
+    colors[Math.floor(getRandomNumber(0, colors.length))]
+  );
 }
 
 function runGame() {
@@ -301,7 +297,7 @@ function runGame() {
   runAnimation((timeStep) => {
     state = state.update(timeStep, arrowKeys);
 
-    if (state.food.length < 3) {
+    if (state.food.length < 1) {
       state.food.push(getRandomFood(30, 20));
     }
 
@@ -314,3 +310,5 @@ function runGame() {
     }
   });
 }
+
+runGame();

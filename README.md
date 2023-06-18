@@ -116,9 +116,55 @@ The `update()` method is also responsible for checking if the snake's head is in
 
 The `collide()` method provided by the piece of food object updates the length of the snake.
 
+### Snake
+
+First implementation for the update function:
+
+```js
+update(time, keys) {
+    // update direction based on keys
+    let speed = this.speed;
+    if (keys.ArrowDown && this.speed.y === 0) {
+      speed = new Vec(0, snakeSpeed);
+    }
+    if (keys.ArrowUp && this.speed.y === 0) {
+      speed = new Vec(0, -snakeSpeed);
+    }
+    if (keys.ArrowLeft && this.speed.x === 0) {
+      speed = new Vec(-snakeSpeed, 0);
+    }
+    if (keys.ArrowRight && this.speed.x === 0) {
+      speed = new Vec(snakeSpeed, 0);
+    }
+
+    // update head position based on direction
+    let previousHeadPosition = this.lastHeadPosition;
+    const newHeadPosition = this.head.position.plus(speed.times(time));
+
+    if (
+      Math.floor(newHeadPosition.x) !== Math.floor(this.head.position.x) ||
+      Math.floor(newHeadPosition.y) !== Math.floor(this.head.position.y)
+    ) {
+      previousHeadPosition = this.head.position;
+    }
+
+    const newHead = {
+      position: newHeadPosition,
+    };
+
+    // update the tail positions based on what the previous ones were
+    const newTail = [{ position: previousHeadPosition }, ...this.tail];
+
+    newTail.pop();
+
+    // return new Snake
+    return new Snake(newHead, newTail, speed, previousHeadPosition);
+  }
+```
+
 ### Display
 
-I used the canvas api to render this game because I planned to give the snake a pixel-art style skin and I would also make the fruits in pixel-art style. 
+I used the canvas api to render this game because I planned to give the snake a pixel-art style skin and I would also make the fruits in pixel-art style.
 
 This class has a `syncState()` method that gets a given state and renders it.
 
@@ -143,6 +189,7 @@ class CanvasDisplay {
 ```
 
 The `runGame()` function actually runs the game by assembling all the high-level components and using a function to run the animation.
+
 ```js
 function runGame() {
   let state = State.start({ x: 30, y: 20 });
@@ -167,6 +214,19 @@ function runGame() {
       return false;
     }
   });
+}
+```
+
+I am quite proud of this function. I didn't know it was so simple. It simply required a `x + y` expression to work as I wanted. Well, I found this solution almost by accident. I knew there was something to do with addition so I was testing and it worked.
+
+```js
+function drawChessBackground(context, width, height, color1, color2) {
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      context.fillStyle = (x + y) % 2 === 0 ? color1 : color2;
+      context.fillRect(x * scale, y * scale, scale, scale);
+    }
+  }
 }
 ```
 
@@ -204,3 +264,32 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+## Scratch
+
+```js
+this.tail
+  .map((part) => {
+    return {
+      position: {
+        x: Math.floor(part.position.x),
+        y: Math.floor(part.position.y),
+      },
+    };
+  })
+  .reduce((parts, part) => {
+    if (
+      !parts.some(
+        (p) =>
+          p.position.x === part.position.x || p.position.y === part.position.y
+      )
+    ) {
+      return [...parts, part];
+    } else {
+      return parts;
+    }
+  }, [])
+  .filter((p, index) => {
+    return index;
+  });
+```
