@@ -1,4 +1,4 @@
-const scale = 15;
+const scale = 20;
 
 function elt(type, attrs, ...children) {
   const domElement = document.createElement(type);
@@ -33,11 +33,12 @@ class Vec {
 const snakeSpeed = 10;
 
 class Snake {
-  constructor(head, tail, speed, lastHeadPosition) {
+  constructor(head, tail, tailLength, speed, previousPositions) {
     this.head = head;
     this.tail = tail; // the closer it is to the beginning of the array, the closer it is to the head
     this.speed = speed;
-    this.lastHeadPosition = lastHeadPosition;
+    this.previousPositions = previousPositions;
+    this.tailLength = tailLength;
   }
 
   update(time, keys) {
@@ -57,34 +58,52 @@ class Snake {
     }
 
     // update head position based on direction
-    let previousHeadPosition = this.lastHeadPosition;
+    let previousPositions = this.previousPositions;
     const newHeadPosition = this.head.position.plus(speed.times(time));
 
     if (
       Math.floor(newHeadPosition.x) !== Math.floor(this.head.position.x) ||
       Math.floor(newHeadPosition.y) !== Math.floor(this.head.position.y)
     ) {
-      previousHeadPosition = this.head.position;
+      previousPositions.unshift(this.head.position);
     }
 
     const newHead = {
       position: newHeadPosition,
     };
 
-    // update the tail positions based on what the previous ones were
-    const newTail = [{ position: previousHeadPosition }, ...this.tail];
+    previousPositions = previousPositions.filter((_, i) => i < this.tailLength);
 
-    newTail.pop();
+    // update the tail positions based on what the previous ones were
+    const newTail = this.previousPositions.map((p) => ({
+      position: p,
+    }));
 
     // return new Snake
-    return new Snake(newHead, newTail, speed, previousHeadPosition);
+    return new Snake(
+      newHead,
+      newTail,
+      this.tailLength,
+      speed,
+      previousPositions
+    );
   }
 
   increase() {
-    const newTail = this.tail.slice();
-    newTail.unshift({ position: this.lastHeadPosition });
+    const newTailLength = this.tailLength + 1;
+    const newTail = this.previousPositions
+      .map((p) => ({
+        position: p,
+      }))
+      .filter((_, i) => i < newTailLength);
 
-    return new Snake(this.head, newTail, this.speed, this.lastHeadPosition);
+    return new Snake(
+      this.head,
+      newTail,
+      newTailLength,
+      this.speed,
+      this.previousPositions
+    );
   }
 }
 
@@ -123,8 +142,9 @@ class State {
         position: new Vec(0, 0),
       },
       [],
+      2,
       new Vec(snakeSpeed, 0),
-      new Vec(0, 0)
+      []
     );
 
     return new State(firstSnake, [], 0, "playing", boundaries);
@@ -215,24 +235,27 @@ class CanvasDisplay {
     drawChessBackground(cx, this.width, this.height, "#00ff00", "#00f000");
 
     // draw snake
-    const snakeParts = [state.snake.head, ...state.snake.tail];
-    console.log(snakeParts);
-    cx.fillStyle = "black";
-    for (const part of snakeParts) {
-      const { x, y } = part.position;
-      cx.fillRect(Math.floor(x) * scale, Math.floor(y) * scale, scale, scale);
-    }
 
     // draw food
     for (const piece of state.food) {
       const { x, y } = piece.position;
       cx.fillStyle = piece.color;
-      cx.fillRect(Math.floor(x) * scale, Math.floor(y) * scale, scale, scale);
+
+      cx.beginPath();
+      cx.arc((Math.floor(x) + 0.5) * scale, (Math.floor(y) + 0.5) * scale, scale / 2.5, 0, 7)
+      cx.fill();
+      cx.closePath();
     }
 
     // show score
     cx.fillStyle = "black";
     cx.fillText("Score: " + state.score, scale, scale);
+
+    const snakeParts = [state.snake.head, ...state.snake.tail];
+    for (const part of snakeParts) {
+      const { x, y } = part.position;
+      cx.fillRect(Math.floor(x) * scale, Math.floor(y) * scale, scale, scale);
+    }
   }
 }
 
@@ -267,7 +290,7 @@ function runAnimation(frameFunction) {
   requestAnimationFrame(frame);
 }
 
-const colors = ["red", "yellow", "orange", "blue", "lightblue", "purple"];
+const foodColors = ["red", "yellow", "orange", "blue", "lightblue", "purple", "tomato", "navy", "teal"];
 
 function getRandomNumber(min, max) {
   return min + (max - min) * Math.random();
@@ -277,13 +300,13 @@ function getRandomFood(limitX, limitY) {
   return new Food(
     Math.floor(getRandomNumber(0, limitX)),
     Math.floor(getRandomNumber(0, limitY)),
-    colors[Math.floor(getRandomNumber(0, colors.length))]
+    foodColors[Math.floor(getRandomNumber(0, foodColors.length))]
   );
 }
 
 function runGame() {
-  let state = State.start({ x: 30, y: 20 });
-  const display = new CanvasDisplay(30, 20);
+  let state = State.start({ x: 20, y: 20 });
+  const display = new CanvasDisplay(20, 20);
   document.body.appendChild(display.dom);
 
   const arrowKeys = trackKeys([
@@ -297,7 +320,7 @@ function runGame() {
     state = state.update(timeStep, arrowKeys);
 
     if (state.food.length < 1) {
-      state.food.push(getRandomFood(30, 20));
+      state.food.push(getRandomFood(20, 20));
     }
 
     if (state.status === "playing") {
@@ -305,6 +328,7 @@ function runGame() {
       return true;
     } else {
       arrowKeys.unregister();
+      console.log("lost");
       return false;
     }
   });
