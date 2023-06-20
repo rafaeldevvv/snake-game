@@ -11,6 +11,7 @@ It is an implementation of the classic snake game. Try to eat as much food as yo
   - [Built with](#built-with)
   - [Thinking](#thinking)
   - [State](#state)
+  - [Snake](#snake)
   - [Display](#display)
   - [Useful resources](#useful-resources)
 - [Author](#author)
@@ -116,7 +117,9 @@ The `update()` method is also responsible for checking if the snake's head is in
 
 The `collide()` method provided by the piece of food object updates the length of the snake.
 
-### Snake
+### Classes
+
+#### Snake
 
 First implementation for the update function:
 
@@ -160,6 +163,113 @@ update(time, keys) {
     // return new Snake
     return new Snake(newHead, newTail, speed, previousHeadPosition);
   }
+```
+
+The above code does not work properly because it makes the tail parts overlap each other, halting the growing of the snake.
+
+The second implementation works as expected:
+
+```js
+class Snake {
+  constructor(head, tail, tailLength, speed, previousPositions) {
+    this.head = head;
+    this.tail = tail; // the closer it is to the beginning of the array, the closer it is to the head
+    this.speed = speed;
+    this.previousPositions = previousPositions;
+    this.tailLength = tailLength;
+  }
+
+  update(time, keys) {
+    // update direction based on keys
+    let speed = this.speed;
+    if (keys.ArrowDown && this.speed.y === 0) {
+      speed = new Vec(0, snakeSpeed);
+    }
+    if (keys.ArrowUp && this.speed.y === 0) {
+      speed = new Vec(0, -snakeSpeed);
+    }
+    if (keys.ArrowLeft && this.speed.x === 0) {
+      speed = new Vec(-snakeSpeed, 0);
+    }
+    if (keys.ArrowRight && this.speed.x === 0) {
+      speed = new Vec(snakeSpeed, 0);
+    }
+
+    // update head position based on direction
+    let previousPositions = this.previousPositions;
+    const newHeadPosition = this.head.position.plus(speed.times(time));
+
+    if (
+      Math.floor(newHeadPosition.x) !== Math.floor(this.head.position.x) ||
+      Math.floor(newHeadPosition.y) !== Math.floor(this.head.position.y)
+    ) {
+      previousPositions.unshift(this.head.position);
+    }
+
+    const newHead = {
+      position: newHeadPosition,
+    };
+
+    previousPositions = previousPositions.filter((_, i) => i < this.tailLength);
+
+    // update the tail positions based on what the previous ones were
+    const newTail = this.previousPositions.map((p) => ({
+      position: p,
+    }));
+
+    // return new Snake
+    return new Snake(
+      newHead,
+      newTail,
+      this.tailLength,
+      speed,
+      previousPositions
+    );
+  }
+
+  grow() {
+    const newTailLength = this.tailLength + 1;
+    const newTail = this.previousPositions.map((p) => ({
+      position: p,
+    }));
+
+    return new Snake(
+      this.head,
+      newTail,
+      newTailLength,
+      this.speed,
+      this.previousPositions
+    );
+  }
+}
+```
+
+I just introduced two new properties called tailLength and previousPositions. The class saves all the different positions that the head of the snake has been and gets the necessary previous positions based on the snake's length removing the unneeded ones.
+
+#### Food
+
+The food class has a collide method which is called when the snake's head overlaps the food. It returns a new state without the piece of food that was eaten and with the longer snake and it also adds one to the score:
+
+```js
+class Food {
+  constructor(x, y, color) {
+    this.position = { x, y };
+    this.color = color;
+  }
+
+  collide(state) {
+    const snake = state.snake;
+    const longerSnake = snake.grow();
+
+    return new State(
+      longerSnake,
+      state.food.filter((f) => f !== this),
+      state.score + (this.score || 1),
+      state.status,
+      state.boundaries
+    );
+  }
+}
 ```
 
 ### Display

@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+  </head>
+  <body>
+    <canvas></canvas>
+    <script>
+      const myCanvas = document.querySelector("canvas");
+      const cx = myCanvas.getContext("2d");
+
+      const scale = 20;
+
+      const height = 20;
+      const width = 30;
+
+      myCanvas.width = width * scale;
+      myCanvas.height = height * scale;
+
+      function drawChessBackground() {
+        for (let y = 0; y < height; y++) {
+          for (let x = 0; x < width; x++) {
+            cx.fillStyle = (x + y) % 2 === 0 ? "#00ff00" : "#00f000";
+            cx.fillRect(x * scale, y * scale, scale, scale);
+          }
+        }
+      }
+      drawChessBackground();
+    </script>
+  </body>
+</html>

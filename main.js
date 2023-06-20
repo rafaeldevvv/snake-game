@@ -89,13 +89,11 @@ class Snake {
     );
   }
 
-  increase() {
+  grow() {
     const newTailLength = this.tailLength + 1;
-    const newTail = this.previousPositions
-      .map((p) => ({
-        position: p,
-      }))
-      .filter((_, i) => i < newTailLength);
+    const newTail = this.previousPositions.map((p) => ({
+      position: p,
+    }));
 
     return new Snake(
       this.head,
@@ -115,7 +113,7 @@ class Food {
 
   collide(state) {
     const snake = state.snake;
-    const longerSnake = snake.increase();
+    const longerSnake = snake.grow();
 
     return new State(
       longerSnake,
@@ -233,16 +231,20 @@ class CanvasDisplay {
 
     // draw background
     drawChessBackground(cx, this.width, this.height, "#00ff00", "#00f000");
-
-    // draw snake
-
+    
     // draw food
     for (const piece of state.food) {
       const { x, y } = piece.position;
       cx.fillStyle = piece.color;
 
       cx.beginPath();
-      cx.arc((Math.floor(x) + 0.5) * scale, (Math.floor(y) + 0.5) * scale, scale / 2.5, 0, 7)
+      cx.arc(
+        (Math.floor(x) + 0.5) * scale,
+        (Math.floor(y) + 0.5) * scale,
+        scale / 2.5,
+        0,
+        7
+      );
       cx.fill();
       cx.closePath();
     }
@@ -251,6 +253,7 @@ class CanvasDisplay {
     cx.fillStyle = "black";
     cx.fillText("Score: " + state.score, scale, scale);
 
+    // draw snake
     const snakeParts = [state.snake.head, ...state.snake.tail];
     for (const part of snakeParts) {
       const { x, y } = part.position;
@@ -268,7 +271,7 @@ function trackKeys(keyNames) {
   }
   window.addEventListener("keydown", track);
   window.addEventListener("keyup", track);
-
+  
   down.unregister = function () {
     window.removeEventListener("keydown", track);
     window.removeEventListener("keyup", track);
@@ -290,7 +293,21 @@ function runAnimation(frameFunction) {
   requestAnimationFrame(frame);
 }
 
-const foodColors = ["red", "yellow", "orange", "blue", "lightblue", "purple", "tomato", "navy", "teal"];
+function createImageElement(src) {
+  return elt("img", {src});
+}
+
+const foodColors = [
+  "red",
+  "yellow",
+  "orange",
+  "blue",
+  "lightblue",
+  "purple",
+  "tomato",
+  "navy",
+  "teal",
+];
 
 function getRandomNumber(min, max) {
   return min + (max - min) * Math.random();
