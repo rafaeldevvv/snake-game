@@ -246,12 +246,12 @@ class Snake {
 
 I just introduced two new properties called tailLength and previousPositions. The class saves all the different positions that the head of the snake has been and gets the necessary previous positions based on the snake's length removing the unneeded ones.
 
-#### Food
+#### Fruit
 
-The food class has a collide method which is called when the snake's head overlaps the food. It returns a new state without the piece of food that was eaten and with the longer snake and it also adds one to the score:
+The `Fruit` class has a `collide()` method which is called when the snake's head overlaps the food. It returns a new state without the piece of food that was eaten and with the longer snake and it also adds one to the score:
 
 ```js
-class Food {
+class Fruit {
   constructor(x, y, color) {
     this.position = { x, y };
     this.color = color;
@@ -260,6 +260,8 @@ class Food {
   collide(state) {
     const snake = state.snake;
     const longerSnake = snake.grow();
+    eatingSoundEffect.currentTime = 0;
+    eatingSoundEffect.play();
 
     return new State(
       longerSnake,
@@ -342,8 +344,10 @@ function drawChessBackground(context, width, height, color1, color2) {
 
 ### Useful Resources
 
-- [chatGPT](https://chat.openai.com/)
-- [Eloquent JS](https://eloquentjavascript.net/)
+- [chatGPT](https://chat.openai.com/) - I used it for almost every doubt
+- [Eloquent JS](https://eloquentjavascript.net/) - Game Project Reference
+- [Epidemic Sound](https://www.epidemicsound.com/) - I used it to get the sound effect.
+- [Free SVG](https://freesvg.org/) - I got some fruit images from here.
 
 ## Author
 
@@ -374,32 +378,3 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
-
-## Scratch
-
-```js
-this.tail
-  .map((part) => {
-    return {
-      position: {
-        x: Math.floor(part.position.x),
-        y: Math.floor(part.position.y),
-      },
-    };
-  })
-  .reduce((parts, part) => {
-    if (
-      !parts.some(
-        (p) =>
-          p.position.x === part.position.x || p.position.y === part.position.y
-      )
-    ) {
-      return [...parts, part];
-    } else {
-      return parts;
-    }
-  }, [])
-  .filter((p, index) => {
-    return index;
-  });
-```
