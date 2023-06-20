@@ -105,19 +105,24 @@ class Snake {
   }
 }
 
-class Food {
-  constructor(x, y, color) {
+const eatingSoundEffect = new Audio();
+eatingSoundEffect.src = "./audio/eating.mp3";
+
+class Fruit {
+  constructor(x, y, imgElement) {
     this.position = { x, y };
-    this.color = color;
+    this.imgElement = imgElement;
   }
 
   collide(state) {
     const snake = state.snake;
     const longerSnake = snake.grow();
+    eatingSoundEffect.currentTime = 0;
+    eatingSoundEffect.play();
 
     return new State(
       longerSnake,
-      state.food.filter((f) => f !== this),
+      null,
       state.score + (this.score || 1),
       state.status,
       state.boundaries
@@ -126,9 +131,9 @@ class Food {
 }
 
 class State {
-  constructor(snake, food, score, status, boundaries) {
+  constructor(snake, fruit, score, status, boundaries) {
     this.snake = snake;
-    this.food = food;
+    this.fruit = fruit;
     this.score = score;
     this.status = status;
     this.boundaries = boundaries;
@@ -145,7 +150,7 @@ class State {
       []
     );
 
-    return new State(firstSnake, [], 0, "playing", boundaries);
+    return new State(firstSnake, null, 0, "playing", boundaries);
   }
 
   update(time, keys) {
@@ -160,7 +165,7 @@ class State {
 
     let newState = new State(
       newSnake,
-      this.food,
+      this.fruit,
       this.score,
       this.status,
       this.boundaries
@@ -169,7 +174,7 @@ class State {
     if (snakeX >= limitX || snakeY >= limitY || snakeX < 0 || snakeY < 0) {
       newState = new State(
         newSnake,
-        this.food,
+        this.fruit,
         this.score,
         "lost",
         this.boundaries
@@ -180,7 +185,7 @@ class State {
     if (this.snake.tail.some((part) => overlap(part, newSnake.head))) {
       newState = new State(
         newSnake,
-        this.food,
+        this.fruit,
         this.score,
         "lost",
         this.boundaries
@@ -188,10 +193,8 @@ class State {
     }
 
     // fruit collision
-    for (const piece of this.food) {
-      if (overlap(piece, newSnake.head)) {
-        newState = piece.collide(newState);
-      }
+    if (this.fruit !== null && overlap(this.fruit, newSnake.head)) {
+      newState = this.fruit.collide(newState);
     }
 
     // return next state
@@ -231,22 +234,20 @@ class CanvasDisplay {
 
     // draw background
     drawChessBackground(cx, this.width, this.height, "#00ff00", "#00f000");
-    
-    // draw food
-    for (const piece of state.food) {
-      const { x, y } = piece.position;
-      cx.fillStyle = piece.color;
 
-      cx.beginPath();
-      cx.arc(
-        (Math.floor(x) + 0.5) * scale,
-        (Math.floor(y) + 0.5) * scale,
-        scale / 2.5,
-        0,
-        7
+    // draw fruit
+    if (state.fruit) {
+      const fruit = state.fruit;
+
+      const { x, y } = fruit.position;
+
+      cx.drawImage(
+        fruit.imgElement,
+        Math.floor(x) * scale,
+        Math.floor(y) * scale,
+        scale,
+        scale
       );
-      cx.fill();
-      cx.closePath();
     }
 
     // show score
@@ -271,7 +272,7 @@ function trackKeys(keyNames) {
   }
   window.addEventListener("keydown", track);
   window.addEventListener("keyup", track);
-  
+
   down.unregister = function () {
     window.removeEventListener("keydown", track);
     window.removeEventListener("keyup", track);
@@ -294,36 +295,28 @@ function runAnimation(frameFunction) {
 }
 
 function createImageElement(src) {
-  return elt("img", {src});
+  return elt("img", { src });
 }
 
-const foodColors = [
-  "red",
-  "yellow",
-  "orange",
-  "blue",
-  "lightblue",
-  "purple",
-  "tomato",
-  "navy",
-  "teal",
-];
+const fruitImages = [createImageElement("./images/apple.png")];
 
 function getRandomNumber(min, max) {
   return min + (max - min) * Math.random();
 }
 
-function getRandomFood(limitX, limitY) {
-  return new Food(
+function getRandomFruit(limitX, limitY) {
+  return new Fruit(
     Math.floor(getRandomNumber(0, limitX)),
     Math.floor(getRandomNumber(0, limitY)),
-    foodColors[Math.floor(getRandomNumber(0, foodColors.length))]
+    fruitImages[Math.floor(getRandomNumber(0, fruitImages.length))]
   );
 }
 
+const mapBoundaries = { x: 20, y: 20 };
+
 function runGame() {
-  let state = State.start({ x: 20, y: 20 });
-  const display = new CanvasDisplay(20, 20);
+  let state = State.start(mapBoundaries);
+  const display = new CanvasDisplay(mapBoundaries.x, mapBoundaries.y);
   document.body.appendChild(display.dom);
 
   const arrowKeys = trackKeys([
@@ -336,8 +329,8 @@ function runGame() {
   runAnimation((timeStep) => {
     state = state.update(timeStep, arrowKeys);
 
-    if (state.food.length < 1) {
-      state.food.push(getRandomFood(20, 20));
+    if (!state.fruit) {
+      state.fruit = getRandomFruit(mapBoundaries.x, mapBoundaries.y);
     }
 
     if (state.status === "playing") {
