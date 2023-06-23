@@ -14,6 +14,7 @@ It is an implementation of the classic snake game. Try to eat as much food as yo
   - [Snake](#snake)
   - [Display](#display)
   - [Useful resources](#useful-resources)
+  - [Sound Effects](#sound-effects)
 - [Author](#author)
 - [License](#license)
 
@@ -246,6 +247,68 @@ class Snake {
 
 I just introduced two new properties called tailLength and previousPositions. The class saves all the different positions that the head of the snake has been and gets the necessary previous positions based on the snake's length removing the unneeded ones.
 
+The third implementation makes the snake a little bit more predictable:
+
+```js
+update(time, keys) {
+    // update direction based on keys
+    let speed = this.speed;
+    if (keys.ArrowDown && this.speed.y === 0) {
+      speed = new Vec(0, snakeSpeed);
+    }
+    if (keys.ArrowUp && this.speed.y === 0) {
+      speed = new Vec(0, -snakeSpeed);
+    }
+    if (keys.ArrowLeft && this.speed.x === 0) {
+      speed = new Vec(-snakeSpeed, 0);
+    }
+    if (keys.ArrowRight && this.speed.x === 0) {
+      speed = new Vec(snakeSpeed, 0);
+    }
+
+    // update head position based on direction
+    let previousPositions = this.previousPositions;
+    const newHeadPosition = this.head.position.plus(speed.times(time));
+
+    if (
+      Math.floor(newHeadPosition.x) !== Math.floor(this.head.position.x) ||
+      Math.floor(newHeadPosition.y) !== Math.floor(this.head.position.y)
+    ) {
+      previousPositions.unshift(this.head);
+    }
+
+    const newDirection = getDirection(speed);
+
+    const newHead = {
+      position: new Vec(
+        newDirection === "down" || newDirection === "up"
+          ? Math.floor(newHeadPosition.x)
+          : newHeadPosition.x,
+        newDirection === "right" || newDirection === "left"
+          ? Math.floor(newHeadPosition.y)
+          : newHeadPosition.y
+      ),
+      direction: newDirection,
+    };
+
+    previousPositions = previousPositions.filter((_, i) => i < this.tailLength);
+
+    // update the tail positions based on what the previous ones were
+    const newTail = this.previousPositions;
+
+    // return new Snake
+    return new Snake(
+      newHead,
+      newTail,
+      this.tailLength,
+      speed,
+      previousPositions
+    );
+  }
+```
+
+Now, depending on the direction of the snake's head, I round down one axis of the snake's head's position. This makes the snake a little bit more predictable because, before when the user changed the snake's direction to one axis, the other axis would have some extra decimal numbers, making the axis be a little bit ahead of what the user would expect. Now the axis starts with no decimal numbers when it is changed, that is it starts from the position the user expects it to be.
+
 #### Fruit
 
 The `Fruit` class has a `collide()` method which is called when the snake's head overlaps the food. It returns a new state without the piece of food that was eaten and with the longer snake and it also adds one to the score:
@@ -348,6 +411,10 @@ function drawChessBackground(context, width, height, color1, color2) {
 - [Eloquent JS](https://eloquentjavascript.net/) - Game Project Reference
 - [Epidemic Sound](https://www.epidemicsound.com/) - I used it to get the sound effect.
 - [Free SVG](https://freesvg.org/) - I got some fruit images from here.
+
+### Sound Effects
+- [Eating Sound Effect](https://www.epidemicsound.com/track/ndQZD8ofQt/)
+- [Background](https://opengameart.org/content/platformer-game-music-pack)
 
 ## Author
 
