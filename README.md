@@ -11,8 +11,11 @@ It is an implementation of the classic snake game. Try to eat as much food as yo
   - [Built with](#built-with)
   - [Thinking](#thinking)
   - [State](#state)
-  - [Snake](#snake)
-  - [Display](#display)
+  - [Classes](#classes)
+    - [Snake](#snake)
+    - [Fruit](#fruit)
+    - [Display](#display)
+  - [Extra](#extra)
   - [Useful resources](#useful-resources)
   - [Sound Effects](#sound-effects)
 - [Author](#author)
@@ -309,6 +312,105 @@ update(time, keys) {
 
 Now, depending on the direction of the snake's head, I round down one axis of the snake's head's position. This makes the snake a little bit more predictable because, before when the user changed the snake's direction to one axis, the other axis would have some extra decimal numbers, making the axis be a little bit ahead of what the user would expect. Now the axis starts with no decimal numbers when it is changed, that is it starts from the position the user expects it to be.
 
+The fourth implementation fixes an annoying bug that would make the snake's head collapse into its own tail:
+
+I know I should avoid mutating values to make code more predictable, but only the Snake class update method would mutate the `scheduledDirectionChanges` array.
+
+Now, a 0.5 value is added to the rounded down axis, that is because if it was only rounded down, it would go a little bit quicker if the speed was negative. This really makes the snake more predictable.
+
+```js
+update(timeStep, scheduledDirectionChanges) {
+    let speed = this.speed;
+
+    const nextDirection = scheduledDirectionChanges.shift();
+    const currentAxis = getAxis(this.head.direction);
+    let isChangingDirection = this.isChangingDirection;
+
+    if (!isChangingDirection) {
+      isChangingDirection = true;
+
+      if (nextDirection === "right" && currentAxis !== "horizontal") {
+        speed = new Vec(snakeSpeed, 0);
+      } else if (nextDirection === "left" && currentAxis !== "horizontal") {
+        speed = new Vec(-snakeSpeed, 0);
+      } else if (nextDirection === "down" && currentAxis !== "vertical") {
+        speed = new Vec(0, snakeSpeed);
+      } else if (nextDirection === "up" && currentAxis !== "vertical") {
+        speed = new Vec(0, -snakeSpeed);
+      }
+    } else if (nextDirection) {
+      scheduledDirectionChanges.unshift(nextDirection);
+    }
+
+    const newHeadPosition = this.head.position.plus(speed.times(timeStep));
+
+    const newHead = {
+      position: new Vec(
+        currentAxis === 'vertical'
+          ? Math.floor(newHeadPosition.x) + 0.5
+          : newHeadPosition.x,
+        currentAxis === 'horizontal'
+          ? Math.floor(newHeadPosition.y) + 0.5
+          : newHeadPosition.y
+      ),
+      direction: getDirection(speed),
+    };
+
+    let previousHeads = this.previousHeads;
+
+    if (
+      ~~newHeadPosition.x !== ~~this.head.position.x ||
+      ~~newHeadPosition.y !== ~~this.head.position.y
+    ) {
+      previousHeads.unshift(this.head);
+      isChangingDirection = false;
+    }
+
+    previousHeads = previousHeads.filter((_, i) => i < this.tailLength);
+
+    const newTail = previousHeads;
+
+    return new Snake(
+      newHead,
+      newTail,
+      this.tailLength,
+      speed,
+      previousHeads,
+      isChangingDirection
+    );
+  }
+```
+
+I changed the approach to associate event handlers to the game. Now when the user presses some arrow key, instead of updating a property with a boolean value, the code schedules a change in the direction of the snake. It is only possible to schedule two direction changes in two different axis to avoid some problems and make the mechanism that prevents the snake from collapsing into its own tail work.
+
+```js
+const scheduledDirectionChanges = [];
+
+window.addEventListener("keydown", (e) => {
+  if (
+    e.key === "ArrowDown" &&
+    scheduledDirectionChanges.every((d) => getAxis(d) !== "vertical")
+  ) {
+    scheduledDirectionChanges.push("down");
+  } else if (
+    e.key === "ArrowUp" &&
+    scheduledDirectionChanges.every((d) => getAxis(d) !== "vertical")
+  ) {
+    scheduledDirectionChanges.push("up");
+  } else if (
+    e.key === "ArrowLeft" &&
+    scheduledDirectionChanges.every((d) => getAxis(d) !== "horizontal")
+  ) {
+    scheduledDirectionChanges.push("left");
+  } else if (
+    e.key === "ArrowRight" &&
+    scheduledDirectionChanges.every((d) => getAxis(d) !== "horizontal")
+  ) {
+    scheduledDirectionChanges.push("right");
+  }
+});
+```
+
 #### Fruit
 
 The `Fruit` class has a `collide()` method which is called when the snake's head overlaps the food. It returns a new state without the piece of food that was eaten and with the longer snake and it also adds one to the score:
@@ -337,7 +439,7 @@ class Fruit {
 }
 ```
 
-### Display
+#### Display
 
 I used the canvas api to render this game because I planned to give the snake a pixel-art style skin and I would also make the fruits in pixel-art style.
 
@@ -367,25 +469,45 @@ The `runGame()` function actually runs the game by assembling all the high-level
 
 ```js
 function runGame() {
-  let state = State.start({ x: 30, y: 20 });
-  const display = new CanvasDisplay(30, 20);
+  let state = State.start(mapBoundaries);
+  const display = new CanvasDisplay(mapBoundaries.x, mapBoundaries.y);
   document.body.appendChild(display.dom);
 
-  const arrowKeys = trackKeys([
-    "ArrowDown",
-    "ArrowUp",
-    "ArrowLeft",
-    "ArrowRight",
-  ]);
+  // it is used to schedule changes in the snake's direction
+  const scheduledDirectionChanges = [];
+
+  window.addEventListener("keydown", (e) => {
+    if (
+      e.key === "ArrowDown" &&
+      scheduledDirectionChanges.every((d) => getAxis(d) !== "vertical")
+    ) {
+      scheduledDirectionChanges.push("down");
+    } else if (
+      e.key === "ArrowUp" &&
+      scheduledDirectionChanges.every((d) => getAxis(d) !== "vertical")
+    ) {
+      scheduledDirectionChanges.push("up");
+    } else if (
+      e.key === "ArrowLeft" &&
+      scheduledDirectionChanges.every((d) => getAxis(d) !== "horizontal")
+    ) {
+      scheduledDirectionChanges.push("left");
+    } else if (
+      e.key === "ArrowRight" &&
+      scheduledDirectionChanges.every((d) => getAxis(d) !== "horizontal")
+    ) {
+      scheduledDirectionChanges.push("right");
+    }
+  });
 
   runAnimation((timeStep) => {
-    state = state.update(timeStep, arrowKeys);
+    state = state.update(timeStep, scheduledDirectionChanges);
 
     if (state.status === "playing") {
       display.syncState(state);
       return true;
     } else {
-      arrowKeys.unregister();
+      console.log("lost");
       return false;
     }
   });
@@ -405,14 +527,33 @@ function drawChessBackground(context, width, height, color1, color2) {
 }
 ```
 
+### Extra
+
+I just discovered this shorthand to round a number down:
+
+```js
+if (
+  ~~newHeadPosition.x !== ~~this.head.position.x ||
+  ~~newHeadPosition.y !== ~~this.head.position.y
+) {
+  // it only adds positions that are different in either axis to avoid overlapping
+  previousHeads.unshift(this.head);
+
+  // if any axis position is different from what it was before, then the direction changed successfully
+  isChangingDirection = false;
+}
+```
+
 ### Useful Resources
 
 - [chatGPT](https://chat.openai.com/) - I used it for almost every doubt
 - [Eloquent JS](https://eloquentjavascript.net/) - Game Project Reference
 - [Epidemic Sound](https://www.epidemicsound.com/) - I used it to get the sound effect.
 - [Free SVG](https://freesvg.org/) - I got some fruit images from here.
+- [pixilart](https://www.pixilart.com/) - I used it to draw the fruits. I first tried to draw the fruits with PhotoShop, but my computer couldn't keep VS Code and PhotoShop open at the same time.
 
 ### Sound Effects
+
 - [Eating Sound Effect](https://www.epidemicsound.com/track/ndQZD8ofQt/)
 - [Background](https://opengameart.org/content/platformer-game-music-pack)
 
@@ -445,3 +586,5 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+## scratch

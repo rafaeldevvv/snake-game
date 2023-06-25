@@ -31,24 +31,6 @@ export function drawChessBackground(context, width, height, color1, color2) {
   }
 }
 
-export function trackKeys(keyNames) {
-  const down = {};
-  function track(event) {
-    if (keyNames.includes(event.key)) {
-      down[event.key] = event.type === "keydown";
-    }
-  }
-  window.addEventListener("keydown", track);
-  window.addEventListener("keyup", track);
-
-  down.unregister = function () {
-    window.removeEventListener("keydown", track);
-    window.removeEventListener("keyup", track);
-  };
-
-  return down;
-}
-
 export function runAnimation(frameFunction) {
   let lastTime = null;
   function frame(newTime) {
@@ -62,21 +44,22 @@ export function runAnimation(frameFunction) {
   requestAnimationFrame(frame);
 }
 
-export function createImageElement(src) {
-  return elt("img", { src });
-}
-
 export function getRandomNumber(min, max) {
-  return min + (max - min) * Math.random();
-}
-
-export function getRandomItem(array) {
-  return array[Math.floor(getRandomNumber(0, array.length))];
+  return Math.floor(min + (max - min) * Math.random());
 }
 
 export function getDirection(speed) {
   if (speed.x > 0) return "right";
-  else if (speed.x < 0) return "left";
-  else if (speed.y > 0) return "down";
-  else if (speed.y < 0) return "up";
+  if (speed.x < 0) return "left";
+  if (speed.y > 0) return "down";
+  if (speed.y < 0) return "up";
+}
+
+export function getAxis(direction) {
+  if (direction === "left" || direction === "right") return "horizontal";
+  if (direction === "up" || direction === "down") return "vertical";
+
+  throw new Error(
+    "getAxis() expects one of four string values: 'down', 'up', 'left' or 'right'"
+  );
 }

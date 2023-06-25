@@ -1,18 +1,16 @@
 import Vec from "./Vec.js";
 import {
   elt,
-  getRandomItem,
   getRandomNumber,
-  createImageElement,
   runAnimation,
-  trackKeys,
   overlap,
   drawChessBackground,
   getDirection,
+  getAxis,
 } from "./utilities.js";
 import scale from "./scale.js";
 
-const snakeSpeed = 10;
+const snakeSpeed = 15;
 
 const backgroundSong = new Audio("./audio/background.mp3");
 backgroundSong.onended = function () {
@@ -20,82 +18,102 @@ backgroundSong.onended = function () {
 };
 
 class Snake {
-  constructor(head, tail, tailLength, speed, previousPositions) {
+  constructor(
+    head,
+    tail,
+    tailLength,
+    speed,
+    previousHeads,
+    isChangingDirection
+  ) {
     this.head = head;
     this.tail = tail; // the closer it is to the beginning of the array, the closer it is to the head
     this.speed = speed;
-    this.previousPositions = previousPositions;
+    this.previousHeads = previousHeads;
     this.tailLength = tailLength;
+    this.isChangingDirection = isChangingDirection;
   }
 
-  update(time, keys) {
-    // update direction based on keys
+  update(timeStep, scheduledDirectionChanges) {
     let speed = this.speed;
-    if (keys.ArrowDown && this.speed.y === 0) {
-      speed = new Vec(0, snakeSpeed);
-    }
-    if (keys.ArrowUp && this.speed.y === 0) {
-      speed = new Vec(0, -snakeSpeed);
-    }
-    if (keys.ArrowLeft && this.speed.x === 0) {
-      speed = new Vec(-snakeSpeed, 0);
-    }
-    if (keys.ArrowRight && this.speed.x === 0) {
-      speed = new Vec(snakeSpeed, 0);
+
+    const nextDirection = scheduledDirectionChanges.shift();
+    const currentAxis = getAxis(this.head.direction);
+    let isChangingDirection = this.isChangingDirection;
+
+    // if it is not changing direction, then we can happily steer the snake into a specific direction
+    if (!isChangingDirection) {
+      isChangingDirection = true;
+
+      if (nextDirection === "right" && currentAxis !== "horizontal") {
+        speed = new Vec(snakeSpeed, 0);
+      } else if (nextDirection === "left" && currentAxis !== "horizontal") {
+        speed = new Vec(-snakeSpeed, 0);
+      } else if (nextDirection === "down" && currentAxis !== "vertical") {
+        speed = new Vec(0, snakeSpeed);
+      } else if (nextDirection === "up" && currentAxis !== "vertical") {
+        speed = new Vec(0, -snakeSpeed);
+      }
+    } else if (nextDirection) {
+      // if it is changing direction we cannot stop this change,
+      // so we give the nextDirection back to the scheduledDirectionChanges array.
+      scheduledDirectionChanges.unshift(nextDirection);
     }
 
-    // update head position based on direction
-    let previousPositions = this.previousPositions;
-    const newHeadPosition = this.head.position.plus(speed.times(time));
+    const newHeadPosition = this.head.position.plus(speed.times(timeStep));
 
-    if (
-      Math.floor(newHeadPosition.x) !== Math.floor(this.head.position.x) ||
-      Math.floor(newHeadPosition.y) !== Math.floor(this.head.position.y)
-    ) {
-      previousPositions.unshift(this.head);
-    }
-
-    const newDirection = getDirection(speed);
-
+    // add 0.5 so that the snake won't go quicker if the speed is negative
     const newHead = {
       position: new Vec(
-        newDirection === "down" || newDirection === "up"
-          ? Math.floor(newHeadPosition.x)
+        currentAxis === 'vertical'
+          ? Math.floor(newHeadPosition.x) + 0.5
           : newHeadPosition.x,
-        newDirection === "right" || newDirection === "left"
-          ? Math.floor(newHeadPosition.y)
+        currentAxis === 'horizontal'
+          ? Math.floor(newHeadPosition.y) + 0.5
           : newHeadPosition.y
       ),
-      direction: newDirection,
+      direction: getDirection(speed),
     };
 
-    previousPositions = previousPositions.filter((_, i) => i < this.tailLength);
+    let previousHeads = this.previousHeads;
 
-    // update the tail positions based on what the previous ones were
-    const newTail = this.previousPositions;
+    if (
+      ~~newHeadPosition.x !== ~~this.head.position.x ||
+      ~~newHeadPosition.y !== ~~this.head.position.y
+    ) {
+      // it only adds positions that are different in either axis to avoid overlapping
+      previousHeads.unshift(this.head);
 
-    // return new Snake
+      // if any axis position is different from what it was before, then the direction changed successfully
+      isChangingDirection = false;
+    }
+
+    // it cuts off the unnecessary saved positions based on the current tail length
+    previousHeads = previousHeads.filter((_, i) => i < this.tailLength);
+
+    const newTail = previousHeads;
+
     return new Snake(
       newHead,
       newTail,
       this.tailLength,
       speed,
-      previousPositions
+      previousHeads,
+      isChangingDirection
     );
   }
 
   grow() {
+    // it is not necessary to update the tail here because it will happen in the update method
     const newTailLength = this.tailLength + 1;
-    const newTail = this.previousPositions.map((p) => ({
-      position: p,
-    }));
 
     return new Snake(
       this.head,
-      newTail,
+      this.tail,
       newTailLength,
       this.speed,
-      this.previousPositions
+      this.previousHeads,
+      this.isChangingDirection
     );
   }
 }
@@ -103,13 +121,13 @@ class Snake {
 const eatingSoundEffect = new Audio();
 eatingSoundEffect.src = "./audio/eating.mp3";
 
-
 class Fruit {
   constructor(x, y, tileX) {
     this.position = { x, y };
     this.tileX = tileX;
   }
 
+  // it returns a new state when it collides with the snake's head, making the snake longer
   collide(state) {
     const snake = state.snake;
     const longerSnake = snake.grow();
@@ -138,7 +156,7 @@ class State {
   static start(boundaries) {
     const firstSnake = new Snake(
       {
-        position: new Vec(0, 0),
+        position: new Vec(0, boundaries.y / 2),
         direction: "right",
       },
       [],
@@ -150,9 +168,9 @@ class State {
     return new State(firstSnake, null, 0, "playing", boundaries);
   }
 
-  update(time, keys) {
+  update(timeStep, scheduledDirectionChanges) {
     // update snake
-    const newSnake = this.snake.update(time, keys);
+    const newSnake = this.snake.update(timeStep, scheduledDirectionChanges);
 
     // wall collision
     const snakeHeadX = newSnake.head.position.x;
@@ -183,7 +201,7 @@ class State {
       );
     }
 
-    // snake collision
+    // tail collision
     if (this.snake.tail.some((part) => overlap(part, newSnake.head))) {
       newState = new State(
         newSnake,
@@ -244,7 +262,7 @@ class CanvasDisplay {
     // show score
     cx.fillStyle = "black";
     cx.font = "bold 18px Arial";
-    cx.fillText("Score: " + state.score, scale, scale);
+    cx.fillText("Score: " + state.score, scale, scale * 1.5);
 
     // draw snake
     const snakeParts = [state.snake.head, ...state.snake.tail];
@@ -259,7 +277,7 @@ function getRandomFruit(limitX, limitY) {
   return new Fruit(
     getRandomNumber(0, limitX),
     getRandomNumber(0, limitY),
-    Math.floor(getRandomNumber(0, 10))
+    getRandomNumber(0, 10)
   );
 }
 
@@ -270,25 +288,40 @@ function runGame() {
   const display = new CanvasDisplay(mapBoundaries.x, mapBoundaries.y);
   document.body.appendChild(display.dom);
 
-  const arrowKeys = trackKeys([
-    "ArrowDown",
-    "ArrowUp",
-    "ArrowLeft",
-    "ArrowRight",
-  ]);
+  // it is used to schedule changes in the snake's direction
+  const scheduledDirectionChanges = [];
 
-  backgroundSong.oncanplaythrough = function () {
-    // backgroundSong.play();
-  };
+  window.addEventListener("keydown", (e) => {
+    if (
+      e.key === "ArrowDown" &&
+      scheduledDirectionChanges.every((d) => getAxis(d) !== "vertical")
+    ) {
+      scheduledDirectionChanges.push("down");
+    } else if (
+      e.key === "ArrowUp" &&
+      scheduledDirectionChanges.every((d) => getAxis(d) !== "vertical")
+    ) {
+      scheduledDirectionChanges.push("up");
+    } else if (
+      e.key === "ArrowLeft" &&
+      scheduledDirectionChanges.every((d) => getAxis(d) !== "horizontal")
+    ) {
+      scheduledDirectionChanges.push("left");
+    } else if (
+      e.key === "ArrowRight" &&
+      scheduledDirectionChanges.every((d) => getAxis(d) !== "horizontal")
+    ) {
+      scheduledDirectionChanges.push("right");
+    }
+  });
 
   runAnimation((timeStep) => {
-    state = state.update(timeStep, arrowKeys);
+    state = state.update(timeStep, scheduledDirectionChanges);
 
     if (state.status === "playing") {
       display.syncState(state);
       return true;
     } else {
-      arrowKeys.unregister();
       console.log("lost");
       return false;
     }
