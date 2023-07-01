@@ -30,7 +30,7 @@ It is an implementation of the classic snake game. Try to eat as much food as yo
 ### Links
 
 - [Repository](https://github.com/rafaeldevvv/snake-game)
-- [Live site]()
+- [Live site](https://rafaeldevvv.io/snake-game)
 
 ### Links
 
@@ -550,7 +550,7 @@ if (
 - [Eloquent JS](https://eloquentjavascript.net/) - Game Project Reference
 - [Epidemic Sound](https://www.epidemicsound.com/) - I used it to get the sound effect.
 - [Free SVG](https://freesvg.org/) - I got some fruit images from here.
-- [pixilart](https://www.pixilart.com/) - I used it to draw the fruits. I first tried to draw the fruits with PhotoShop, but my computer couldn't keep VS Code and PhotoShop open at the same time.
+- [pixilart](https://www.pixilart.com/) - I used it to draw the fruits and the snake. I first tried to draw the fruits with PhotoShop, but my computer couldn't keep VS Code and PhotoShop open at the same time.
 
 ### Sound Effects
 
@@ -588,3 +588,36 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 ## scratch
+```js
+const parts = [newHead, ...previousHeads];
+
+    /* for (let i = 1; i < parts.length; i++) {
+      const currentPart = parts[i];
+      if (currentPart.isCurve) continue;
+      // previousPart because the further away the index is from zero, the further it is from the head
+      const nextPart = parts[Math.min(i + 1, parts.length - 1)];
+      const previousPart = parts[i - 1];
+
+      if (
+        nextPart.direction !== previousPart.direction ||
+        nextDirection?.directions?.[0] !== previousPart?.directions?.[1]
+      ) {
+        const directions = [];
+        if (nextPart.direction === "down") {
+          directions.push("up");
+        } else if (nextPart.direction === "up") {
+          directions.push("down");
+        } else if (nextPart.direction === 'left') {
+          directions.push("right");
+        }
+
+        const curve = {
+          ...currentPart,
+          isCurve: true,
+          direction: null,
+          directions,
+        };
+        parts[i] = curve;
+      }
+    } */
+```

@@ -56,6 +56,8 @@ export function getDirection(speed) {
 }
 
 export function getAxis(direction) {
+  if (!direction) return direction;
+  
   if (direction === "left" || direction === "right") return "horizontal";
   if (direction === "up" || direction === "down") return "vertical";
 

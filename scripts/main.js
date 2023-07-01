@@ -10,7 +10,7 @@ import {
 } from "./utilities.js";
 import scale from "./scale.js";
 
-const snakeSpeed = 15;
+const snakeSpeed = 14;
 
 const backgroundSong = new Audio("./audio/background.mp3");
 backgroundSong.onended = function () {
@@ -35,44 +35,43 @@ class Snake {
   }
 
   update(timeStep, scheduledDirectionChanges) {
-    let speed = this.speed;
+    let newSpeed = this.speed;
 
-    const nextDirection = scheduledDirectionChanges.shift();
-    const currentAxis = getAxis(this.head.direction);
+    const nextDirection = scheduledDirectionChanges[0];
+    let currentAxis = getAxis(getDirection(newSpeed));
     let isChangingDirection = this.isChangingDirection;
 
     // if it is not changing direction, then we can happily steer the snake into a specific direction
-    if (!isChangingDirection) {
+    if (!isChangingDirection && nextDirection) {
       isChangingDirection = true;
+      scheduledDirectionChanges.shift();
 
       if (nextDirection === "right" && currentAxis !== "horizontal") {
-        speed = new Vec(snakeSpeed, 0);
+        newSpeed = new Vec(snakeSpeed, 0);
       } else if (nextDirection === "left" && currentAxis !== "horizontal") {
-        speed = new Vec(-snakeSpeed, 0);
+        newSpeed = new Vec(-snakeSpeed, 0);
       } else if (nextDirection === "down" && currentAxis !== "vertical") {
-        speed = new Vec(0, snakeSpeed);
+        newSpeed = new Vec(0, snakeSpeed);
       } else if (nextDirection === "up" && currentAxis !== "vertical") {
-        speed = new Vec(0, -snakeSpeed);
+        newSpeed = new Vec(0, -snakeSpeed);
       }
-    } else if (nextDirection) {
-      // if it is changing direction we cannot stop this change,
-      // so we give the nextDirection back to the scheduledDirectionChanges array.
-      scheduledDirectionChanges.unshift(nextDirection);
     }
 
-    const newHeadPosition = this.head.position.plus(speed.times(timeStep));
+    const newHeadPosition = this.head.position.plus(newSpeed.times(timeStep));
 
-    // add 0.5 so that the snake won't go quicker if the speed is negative
+    const goingToAxis = getAxis(getDirection(newSpeed));
+
+    // add 0.5 so that the snake won't go quicker if the newSpeed is negative
     const newHead = {
       position: new Vec(
-        currentAxis === 'vertical'
+        goingToAxis === "vertical"
           ? Math.floor(newHeadPosition.x) + 0.5
           : newHeadPosition.x,
-        currentAxis === 'horizontal'
+        goingToAxis === "horizontal"
           ? Math.floor(newHeadPosition.y) + 0.5
           : newHeadPosition.y
       ),
-      direction: getDirection(speed),
+      direction: getDirection(newSpeed),
     };
 
     let previousHeads = this.previousHeads;
@@ -82,22 +81,53 @@ class Snake {
       ~~newHeadPosition.y !== ~~this.head.position.y
     ) {
       // it only adds positions that are different in either axis to avoid overlapping
-      previousHeads.unshift(this.head);
+      const currentHead = { ...this.head };
+
+      const lastDirection = this.tail[0]?.direction || this.head.direction;
+      const nextAxis = getAxis(newHead.direction);
+      const currentAxis = getAxis(lastDirection);
 
       // if any axis position is different from what it was before, then the direction changed successfully
+      if (currentAxis !== nextAxis) {
+        let otherDirection;
+
+        switch (lastDirection) {
+          case "right": {
+            otherDirection = "left";
+            break;
+          }
+          case "left": {
+            otherDirection = "right";
+            break;
+          }
+          case "up": {
+            otherDirection = "down";
+            break;
+          }
+          case "down": {
+            otherDirection = "up";
+            break;
+          }
+        }
+
+        currentHead.isCurve = true;
+        currentHead.directions = [otherDirection, newHead.direction];
+      }
+
+      previousHeads.unshift(currentHead);
       isChangingDirection = false;
     }
 
-    // it cuts off the unnecessary saved positions based on the current tail length
+    // it cuts off the unnecessary saved positions based on the current tail length;
     previousHeads = previousHeads.filter((_, i) => i < this.tailLength);
 
-    const newTail = previousHeads;
+    const newTail = [...previousHeads];
 
     return new Snake(
       newHead,
       newTail,
       this.tailLength,
-      speed,
+      newSpeed,
       previousHeads,
       isChangingDirection
     );
@@ -113,7 +143,7 @@ class Snake {
       newTailLength,
       this.speed,
       this.previousHeads,
-      this.isChangingDirection
+      this.changingTo
     );
   }
 }
@@ -162,7 +192,8 @@ class State {
       [],
       2,
       new Vec(snakeSpeed, 0),
-      []
+      [],
+      null
     );
 
     return new State(firstSnake, null, 0, "playing", boundaries);
@@ -223,54 +254,235 @@ class State {
 }
 
 const fruitsSprite = elt("img", { src: "./images/fruits-sprite.png" });
+const snakeSprite = elt("img", { src: "./images/snake-sprite.png" });
 
-class CanvasDisplay {
+class View {
   constructor(width, height) {
-    this.dom = elt("canvas", {
+    this.scoreDOM = elt("span", { className: "score" });
+    this.bestScoreDOM = elt("span", { className: "best-score" });
+    this.resetButton = elt("button", { className: "reset-btn btn" });
+    this.muteButton = elt("button", { className: "mute-btn btn" });
+
+    const canvas = elt("canvas", {
       width: width * scale,
       height: height * scale,
     });
 
+    this.dom = elt(
+      "div",
+      { id: "game-container" },
+      elt("div", { className: "score-container" }, this.scoreDOM, this.bestScoreDOM),
+      canvas,
+      elt("div", { className: "buttons" }, this.resetButton, this.muteButton)
+    );
+
     this.width = width;
     this.height = height;
+    this.canvasContext = canvas.getContext("2d");
   }
 
   syncState(state) {
-    const cx = this.dom.getContext("2d");
-
     // draw background
-    drawChessBackground(cx, this.width, this.height, "#00ff00", "#00f000");
+    this.drawBackground();
 
     // draw fruit
     if (state.fruit) {
-      const fruit = state.fruit;
-      const { x, y } = fruit.position;
-
-      cx.drawImage(
-        fruitsSprite,
-        scale * fruit.tileX,
-        0,
-        scale,
-        scale,
-        Math.floor(x) * scale,
-        Math.floor(y) * scale,
-        scale,
-        scale
-      );
+      this.drawFruit(state.fruit);
     }
 
     // show score
-    cx.fillStyle = "black";
-    cx.font = "bold 18px Arial";
-    cx.fillText("Score: " + state.score, scale, scale * 1.5);
+    this.canvasContext.fillStyle = "black";
+    this.canvasContext.font = "bold 18px Arial";
+    this.canvasContext.fillText("Score: " + state.score, scale, scale * 1.5);
 
     // draw snake
-    const snakeParts = [state.snake.head, ...state.snake.tail];
-    for (const part of snakeParts) {
-      const { x, y } = part.position;
-      cx.fillRect(Math.floor(x) * scale, Math.floor(y) * scale, scale, scale);
-    }
+    const { tail } = state.snake;
+    this.drawSnakeHead(state.snake);
+
+    this.drawSnakeTail(tail);
   }
+
+  drawBackground() {
+    drawChessBackground(
+      this.canvasContext,
+      this.width,
+      this.height,
+      "#00ff00",
+      "#00f000"
+    );
+  }
+
+  drawFruit(fruit) {
+    const { x, y } = fruit.position;
+
+    this.canvasContext.drawImage(
+      fruitsSprite,
+      scale * fruit.tileX,
+      0,
+      scale,
+      scale,
+      Math.floor(x) * scale,
+      Math.floor(y) * scale,
+      scale,
+      scale
+    );
+  }
+
+  drawSnakeHead(snake) {
+    const head = snake.head;
+    let x = Math.floor(head.position.x) * scale,
+      y = Math.floor(head.position.y) * scale;
+
+    let direction;
+    if (snake.isChangingDirection) {
+      direction = snake.tail[0];
+    } else {
+      direction = snake.head.direction;
+    }
+
+    this.canvasContext.save();
+    rotateCanvasBasedOnDirection(
+      this.canvasContext,
+      direction,
+      x + 0.5 * scale,
+      y + 0.5 * scale
+    );
+    this.canvasContext.drawImage(
+      snakeSprite,
+      0,
+      0,
+      scale,
+      scale,
+      x,
+      y,
+      scale,
+      scale
+    );
+    this.canvasContext.restore();
+  }
+
+  drawSnakeTail(tail) {
+    if (tail.length === 0) return;
+
+    for (let i = 0; i < tail.length - 1; i++) {
+      const part = tail[i];
+
+      const centerX = (Math.floor(part.position.x) + 0.5) * scale,
+        centerY = (Math.floor(part.position.y) + 0.5) * scale;
+      const x = Math.floor(part.position.x) * scale,
+        y = Math.floor(part.position.y) * scale;
+
+      if (part.isCurve) {
+        this.canvasContext.save();
+        rotateCanvasBasedOnCurve(
+          this.canvasContext,
+          part.directions,
+          centerX,
+          centerY
+        );
+        this.canvasContext.drawImage(
+          snakeSprite,
+          3 * scale,
+          0,
+          scale,
+          scale,
+          x,
+          y,
+          scale,
+          scale
+        );
+        this.canvasContext.restore();
+      } else {
+        const direction = part.direction;
+
+        this.canvasContext.save();
+        rotateCanvasBasedOnDirection(
+          this.canvasContext,
+          direction,
+          centerX,
+          centerY
+        );
+        this.canvasContext.drawImage(
+          snakeSprite,
+          scale,
+          0,
+          scale,
+          scale,
+          x,
+          y,
+          scale,
+          scale
+        );
+        this.canvasContext.restore();
+      }
+    }
+
+    const finalPart = tail[tail.length - 1];
+
+    let { x, y } = finalPart.position;
+    (x = Math.floor(x) * scale), (y = Math.floor(y) * scale);
+
+    this.canvasContext.save();
+    rotateCanvasBasedOnDirection(
+      this.canvasContext,
+      finalPart.direction,
+      x + 0.5 * scale,
+      y + 0.5 * scale
+    );
+    this.canvasContext.drawImage(
+      snakeSprite,
+      2 * scale,
+      0,
+      scale,
+      scale,
+      x,
+      y,
+      scale,
+      scale
+    );
+    this.canvasContext.restore();
+  }
+}
+
+function rotateCanvasBasedOnCurve(context, directions, aroundX, aroundY) {
+  let degree;
+  if (allValuesAreIn(directions, "up", "right")) {
+    degree = 0;
+  } else if (allValuesAreIn(directions, "right", "down")) {
+    degree = 90;
+  } else if (allValuesAreIn(directions, "down", "left")) {
+    degree = 180;
+  } else if (allValuesAreIn(directions, "up", "left")) {
+    degree = 270;
+  }
+
+  rotateCanvas(context, degree, aroundX, aroundY);
+}
+
+function allValuesAreIn(array, ...values) {
+  let are = true;
+  values.forEach((v) => {
+    if (array.indexOf(v) === -1) are = false;
+  });
+
+  return are;
+}
+
+function rotateCanvasBasedOnDirection(context, direction, aroundX, aroundY) {
+  let degree = 0;
+  if (direction === "up") degree = 360;
+  else if (direction === "down") degree = 180;
+  else if (direction === "left") degree = 270;
+  else if (direction === "right") degree = 90;
+  else degree = 0;
+
+  rotateCanvas(context, degree, aroundX, aroundY);
+}
+
+function rotateCanvas(context, degree, aroundX, aroundY) {
+  context.translate(aroundX, aroundY);
+  context.rotate((degree * Math.PI) / 180);
+  context.translate(-aroundX, -aroundY);
 }
 
 function getRandomFruit(limitX, limitY) {
@@ -285,7 +497,7 @@ const mapBoundaries = { x: 20, y: 20 };
 
 function runGame() {
   let state = State.start(mapBoundaries);
-  const display = new CanvasDisplay(mapBoundaries.x, mapBoundaries.y);
+  const display = new View(mapBoundaries.x, mapBoundaries.y);
   document.body.appendChild(display.dom);
 
   // it is used to schedule changes in the snake's direction
