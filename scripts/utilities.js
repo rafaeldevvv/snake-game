@@ -1,4 +1,5 @@
 import scale from "./scale.js";
+import Vec from "./Vec.js";
 
 export function elt(type, attrs, ...children) {
   const domElement = document.createElement(type);
@@ -31,19 +32,6 @@ export function drawChessBackground(context, width, height, color1, color2) {
   }
 }
 
-export function runAnimation(frameFunction) {
-  let lastTime = null;
-  function frame(newTime) {
-    if (lastTime != null) {
-      const timePassed = Math.min(100, newTime - lastTime) / 1000;
-      if (frameFunction(timePassed) === false) return;
-    }
-    lastTime = newTime;
-    requestAnimationFrame(frame);
-  }
-  requestAnimationFrame(frame);
-}
-
 export function getRandomNumber(min, max) {
   return Math.floor(min + (max - min) * Math.random());
 }
@@ -64,4 +52,33 @@ export function getAxis(direction) {
   throw new Error(
     "getAxis() expects one of four string values: 'down', 'up', 'left' or 'right'"
   );
+}
+
+export function getOppositeDirection(direction) {
+  switch (direction) {
+    case "right": {
+      return "left";
+    }
+    case "left": {
+      return "right";
+    }
+    case "up": {
+      return "down";
+    }
+    case "down": {
+      return "up";
+    }
+  }
+}
+
+export function getSpeed(direction, axis, speed = 14) {
+  if (direction === "right" && axis !== "horizontal") {
+    return new Vec(speed, 0);
+  } else if (direction === "left" && axis !== "horizontal") {
+    return new Vec(-speed, 0);
+  } else if (direction === "down" && axis !== "vertical") {
+    return new Vec(0, speed);
+  } else if (direction === "up" && axis !== "vertical") {
+    return new Vec(0, -speed);
+  }
 }

@@ -1,0 +1,108 @@
+* {
+   padding: 0;
+   margin: 0;
+   box-sizing: border-box;
+}
+
+/* #### ELEMENTS #### */
+body {
+   font-family: sans-serif;
+}
+
+button {
+   border: 0;
+   background: none;
+   outline: 0;
+   cursor: pointer;
+}
+
+h1 {
+   text-align: center;
+   text-decoration: underline;
+   margin-bottom: .5rem;
+}
+
+/* #### UTILITIES #### */
+.btn {
+   position: relative;
+   padding: .5rem;
+   border-radius: .5rem;
+   font-size: 1rem;
+   border: black 2px solid;
+   box-shadow: 0 2px black;
+}
+.btn:active {
+   box-shadow: 0 0 black;
+   top: 2px;
+}
+
+.reset-btn {
+   background-color: blue;
+   color: white;
+}
+
+.mute-btn {
+   background-color: teal;
+   color: white;
+}
+
+/* The Page specific elements */
+#game-container {
+   width: max-content;
+   margin: 2rem auto;
+}
+
+.score-container {
+   display: flex;
+   justify-content: space-between;
+   margin-bottom: .5rem;
+}
+
+.score-box {
+   padding: .5rem;
+   border-radius: .5rem;
+   display: block;
+}
+
+.score {
+   background-color: red;
+   color: white;
+}
+
+.best-score {
+   background-color: yellow;
+}
+
+.small-warning {
+   font-size: .7rem;
+   margin-bottom: .2rem;
+}
+
+.canvas-container {
+   position: relative;
+}
+
+.final-message-container {
+   position: absolute;
+   left: 50%;
+   top: 50%;
+   transform: translate(-50%, -50%);
+   background-color: red;
+   border-radius: .5rem;
+   color: white;
+   text-align: center;
+   padding: 1rem;
+   box-shadow: 0 0 15px -3px black;
+}
+
+.lost-text {
+   font-size: 2rem;
+   font-weight: 800;
+   margin-bottom: .5rem;
+}
+
+.buttons {
+   display: flex;
+   justify-content: space-between;
+   margin: .5rem 0;
+}
