@@ -22,6 +22,10 @@ h1 {
    margin-bottom: .5rem;
 }
 
+a {
+   color: green;
+}
+
 /* #### UTILITIES #### */
 .btn {
    position: relative;
@@ -46,6 +50,11 @@ h1 {
    color: white;
 }
 
+.small-warning {
+   font-size: .7rem;
+   margin-bottom: .2rem;
+}
+
 /* The Page specific elements */
 #game-container {
    width: max-content;
@@ -64,6 +73,10 @@ h1 {
    display: block;
 }
 
+.small-warning:nth-of-type(2) {
+   margin-bottom: .7rem;
+}
+
 .score {
    background-color: red;
    color: white;
@@ -71,11 +84,6 @@ h1 {
 
 .best-score {
    background-color: yellow;
-}
-
-.small-warning {
-   font-size: .7rem;
-   margin-bottom: .2rem;
 }
 
 .canvas-container {
@@ -105,4 +113,9 @@ h1 {
    display: flex;
    justify-content: space-between;
    margin: .5rem 0;
+}
+
+footer {
+   text-align: center;
+   margin-bottom: 3rem;
 }

@@ -2,7 +2,6 @@ import Vec from "./Vec.js";
 import {
   elt,
   getRandomNumber,
-
   overlap,
   drawChessBackground,
   getDirection,
@@ -12,6 +11,7 @@ import {
 } from "./utilities.js";
 import scale from "./scale.js";
 
+// runAnimation is here because I need to store the current animation frame id in a variable to cancel it when the user resets the game.
 let currentAnimation = null;
 function runAnimation(frameFunction) {
   let lastTime = null;
@@ -28,6 +28,7 @@ function runAnimation(frameFunction) {
 
 const snakeSpeed = 14;
 
+// a loop
 const backgroundSong = new Audio("./audio/background.mp3");
 backgroundSong.onended = function () {
   backgroundSong.currentTime = 0;
@@ -100,6 +101,8 @@ class Snake {
       // if any axis position is different from what it was before, then the direction changed successfully
       if (currentAxis !== nextAxis) {
         currentHead.isCurve = true;
+
+        // we need to change the opposite direction because this array represents the directions the curve points at
         currentHead.directions = [
           getOppositeDirection(lastDirection),
           newHead.direction,
@@ -194,6 +197,7 @@ class State {
       },
     ];
 
+    // defines the first snake with an initial tail
     const firstSnake = new Snake(
       {
         position: new Vec(2, boundaries.y / 2),
@@ -281,13 +285,13 @@ const fruitsSprite = elt("img", { src: "./images/fruits-sprite.png" });
 const snakeSprite = elt("img", { src: "./images/snake-sprite.png" });
 
 class View {
-  constructor(state, width, height, onReset, onMute) {
+  constructor(canvasWidth, canvasHeight, onRestart, onMute) {
     this.scoreDOM = elt("span", { className: "score score-box" });
     this.bestScoreDOM = elt("span", { className: "best-score score-box" });
     this.resetButton = elt(
       "button",
-      { className: "reset-btn btn", onclick: onReset },
-      "Reset"
+      { className: "reset-btn btn", onclick: onRestart },
+      "Restart"
     );
     this.muteButton = elt("button", {
       className: "mute-btn btn",
@@ -295,8 +299,8 @@ class View {
     });
 
     const canvas = elt("canvas", {
-      width: width * scale,
-      height: height * scale,
+      width: canvasWidth * scale,
+      height: canvasHeight * scale,
     });
 
     this.finalMessageContainer = elt("div");
@@ -313,22 +317,27 @@ class View {
       { id: "game-container" },
       elt("h1", null, "Snake Game"),
       elt(
+        "p",
+        { className: "small-warning" },
+        `- Press the "Esc" key to pause the game.`
+      ),
+      elt(
+        "p",
+        { className: "small-warning" },
+        "- Press the arrow keys to start the game and control the snake."
+      ),
+      elt(
         "div",
         { className: "score-container" },
         this.scoreDOM,
         this.bestScoreDOM
       ),
-      elt(
-        "p",
-        { className: "small-warning" },
-        `Press the "Esc" key to pause the game`
-      ),
       this.canvasContainer,
       elt("div", { className: "buttons" }, this.resetButton, this.muteButton)
     );
 
-    this.width = width;
-    this.height = height;
+    this.canvasWidth = canvasWidth;
+    this.canvasHeight = canvasHeight;
     this.canvasContext = canvas.getContext("2d");
   }
 
@@ -347,7 +356,7 @@ class View {
     this.score = score;
     this.bestScore = bestScore;
 
-    this.muted = state.muted;
+    this.muted = muted;
 
     // draw background
     this.drawBackground();
@@ -384,14 +393,13 @@ class View {
 
   clear() {
     this.finalMessageContainer.textContent = "";
-    this.drawBackground();
   }
 
   drawBackground() {
     drawChessBackground(
       this.canvasContext,
-      this.width,
-      this.height,
+      this.canvasWidth,
+      this.canvasHeight,
       "#00ff00",
       "#00f000"
     );
@@ -452,6 +460,7 @@ class View {
     for (let i = 0; i < tail.length - 1; i++) {
       const part = tail[i];
 
+      // the centers are used to rotate the canvas correctly
       const centerX = (Math.floor(part.position.x) + 0.5) * scale,
         centerY = (Math.floor(part.position.y) + 0.5) * scale;
       const x = Math.floor(part.position.x) * scale,
@@ -529,6 +538,7 @@ class View {
   }
 }
 
+// it rotates the canvas based on what directions the curve points at
 function rotateCanvasBasedOnCurve(context, directions, aroundX, aroundY) {
   let degree;
   if (allValuesAreIn(directions, "up", "right")) {
@@ -583,7 +593,6 @@ const mapBoundaries = { x: 20, y: 20 };
 function runGame() {
   let state = State.start(mapBoundaries, true);
   const view = new View(
-    state,
     mapBoundaries.x,
     mapBoundaries.y,
     () => {
@@ -607,7 +616,7 @@ function runGame() {
       view.muted = state.muted;
     }
   );
-  document.body.appendChild(view.dom);
+  document.querySelector("#wrapper").appendChild(view.dom);
   view.syncState(state);
 
   snakeSprite.onload = function () {
@@ -624,18 +633,22 @@ function runGame() {
   let scheduledDirectionChanges = [];
 
   let paused = false;
+  // we use this variable 
   let running = false;
 
   window.addEventListener("keydown", (e) => {
+    // to prevent scrolling
     if (e.key.indexOf("Arrow") !== -1) {
       e.preventDefault();
     }
 
+    // to start the game
     if (!running && e.key.indexOf("Arrow") !== -1) {
       running = true;
       runAnimation(runner);
     }
 
+    // to pause
     if (e.key === "Escape") {
       paused = !paused;
     }
@@ -665,6 +678,7 @@ function runGame() {
     }
   });
 
+  // this function might be called a lot of times, so instead of defining it on the spot, I just defined it here
   function runner(timeStep) {
     if (paused) return true;
 

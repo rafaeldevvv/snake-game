@@ -14,7 +14,7 @@ It is an implementation of the classic snake game. Try to eat as much food as yo
   - [Classes](#classes)
     - [Snake](#snake)
     - [Fruit](#fruit)
-    - [Display](#display)
+    - [View](#view)
   - [Extra](#extra)
   - [Useful resources](#useful-resources)
   - [Sound Effects](#sound-effects)
@@ -54,7 +54,7 @@ I also used a lot of helper functions from that chapter - well, they are, in fac
 
 ### State
 
-The state consists of the snake, the pieces of food over the map. the score(how many fruits have been eaten), the status(lost or playing) and the boundaries(limits of the map).
+The state consists of the snake, the pieces of food over the map. the score(how many fruits have been eaten), the status(lost or playing), the boundaries(limits of the map), the best score and if the application is muted.
 
 The object representing the state also has an `update()` method which is used to update the state. It takes the time step since the previous update and the keys currently held down.
 
@@ -62,15 +62,50 @@ The static `start()` method just gives you an initial state to begin the game.
 
 ```js
 class State {
-  constructor(snake, food, score, status, boundaries) {
+  constructor(snake, fruit, score, status, boundaries, bestScore, muted) {
     this.snake = snake;
-    this.food = food;
+    this.fruit = fruit;
     this.score = score;
     this.status = status;
     this.boundaries = boundaries;
+    this.bestScore = bestScore;
+    this.muted = muted;
   }
 
-  static start(boundaries) {}
+  static start(boundaries, muted) {
+    const firstTail = [
+      {
+        position: new Vec(1, boundaries.y / 2),
+        direction: "right",
+      },
+      {
+        position: new Vec(0, boundaries.y / 2),
+        direction: "right",
+      },
+    ];
+
+    const firstSnake = new Snake(
+      {
+        position: new Vec(2, boundaries.y / 2),
+        direction: "right",
+      },
+      firstTail,
+      2,
+      new Vec(snakeSpeed, 0),
+      [...firstTail],
+      false
+    );
+
+    return new State(
+      firstSnake,
+      getRandomFruit(boundaries.x, boundaries.y),
+      0,
+      "playing",
+      boundaries,
+      localStorage.getItem("best-score") || 0,
+      muted
+    );
+  }
 
   update(time, keys) {
     // update snake
@@ -411,6 +446,84 @@ window.addEventListener("keydown", (e) => {
 });
 ```
 
+And this is the fifth implementation that adds curve to the snake's tail. I had to change a lot of things. I think the snake's tail curves were the hardest problem to solve in this project. I know it is ugly, but I am going to refactor the entire code.
+
+```js
+update(timeStep, scheduledDirectionChanges){
+  let newSpeed = this.speed;
+
+  let currentAxis = getAxis(getDirection(newSpeed));
+  let isChangingDirection = this.isChangingDirection;
+
+  // if it is not changing direction, then we can happily steer the snake into a specific direction
+  const nextDirection = scheduledDirectionChanges[0];
+
+  if (!isChangingDirection && nextDirection) {
+    isChangingDirection = true;
+    scheduledDirectionChanges.shift();
+
+    newSpeed = getSpeed(nextDirection, currentAxis, snakeSpeed) || newSpeed;
+  }
+
+  const newHeadPosition = this.head.position.plus(newSpeed.times(timeStep));
+
+  const goingToAxis = getAxis(getDirection(newSpeed));
+
+  // add 0.5 so that the snake won't go quicker if the newSpeed is negative
+  const newHead = {
+    position: new Vec(
+      goingToAxis === "vertical"
+        ? Math.floor(newHeadPosition.x) + 0.5
+        : newHeadPosition.x,
+      goingToAxis === "horizontal"
+        ? Math.floor(newHeadPosition.y) + 0.5
+        : newHeadPosition.y
+    ),
+    direction: getDirection(newSpeed),
+  };
+
+  let previousHeads = this.previousHeads;
+
+  if (
+    ~~newHeadPosition.x !== ~~this.head.position.x ||
+    ~~newHeadPosition.y !== ~~this.head.position.y
+  ) {
+    // it only adds positions that are different in either axis to avoid overlapping
+    const currentHead = { ...this.head };
+
+    const lastDirection = this.tail[0]?.direction || this.head.direction;
+    const nextAxis = getAxis(newHead.direction);
+    const currentAxis = getAxis(lastDirection);
+
+    // if any axis position is different from what it was before, then the direction changed successfully
+    if (currentAxis !== nextAxis) {
+      currentHead.isCurve = true;
+      currentHead.directions = [
+        getOppositeDirection(lastDirection),
+        newHead.direction,
+      ];
+    }
+
+    previousHeads.unshift(currentHead);
+    isChangingDirection = false;
+  }
+
+  // it cuts off the unnecessary saved positions based on the current tail length;
+  previousHeads = previousHeads.filter((_, i) => i < this.tailLength);
+
+  const newTail = [...previousHeads];
+
+  return new Snake(
+    newHead,
+    newTail,
+    this.tailLength,
+    newSpeed,
+    previousHeads,
+    isChangingDirection
+  );
+}
+```
+
 #### Fruit
 
 The `Fruit` class has a `collide()` method which is called when the snake's head overlaps the food. It returns a new state without the piece of food that was eaten and with the longer snake and it also adds one to the score:
@@ -439,7 +552,7 @@ class Fruit {
 }
 ```
 
-#### Display
+#### View
 
 I used the canvas api to render this game because I planned to give the snake a pixel-art style skin and I would also make the fruits in pixel-art style.
 
@@ -527,6 +640,34 @@ function drawChessBackground(context, width, height, color1, color2) {
 }
 ```
 
+The second implementation becomes a lot more complex due to addition of new features:
+
+```js
+class View {
+  constructor(canvasWidth, canvasHeight, onRestart, onMute) {}
+
+  set score(newScore) {}
+
+  set bestScore(newBestScore) {}
+
+  syncState(state) {}
+
+  endGame() {}
+
+  set muted(muted) {}
+
+  clear() {}
+
+  drawBackground() {}
+
+  drawFruit(fruit) {}
+
+  drawSnakeHead(snake) {}
+
+  drawSnakeTail(tail) {}
+}
+```
+
 ### Extra
 
 I just discovered this shorthand to round a number down:
@@ -549,7 +690,7 @@ if (
 - [chatGPT](https://chat.openai.com/) - I used it for almost every doubt
 - [Eloquent JS](https://eloquentjavascript.net/) - Game Project Reference
 - [Epidemic Sound](https://www.epidemicsound.com/) - I used it to get the sound effect.
-- [Free SVG](https://freesvg.org/) - I got some fruit images from here.
+- [Free SVG](https://freesvg.org/) - I got some reference images from here.
 - [pixilart](https://www.pixilart.com/) - I used it to draw the fruits and the snake. I first tried to draw the fruits with PhotoShop, but my computer couldn't keep VS Code and PhotoShop open at the same time.
 
 ### Sound Effects
@@ -562,6 +703,7 @@ if (
 - Twitter => [@rafaeldevvv](https://www.twitter.com/rafaeldevvv)
 - Instagram => [@rafaeldevvv](https://www.instagram.com/rafaeldevvv)
 - YouTube => [@rafaelmaia4836](https://www.youtube.com/channel/UC_QOvDZdUskTSJ59eMDjuEg)
+- GitHub => [@rafaeldevvv](https://gtihub.com/rafaeldevvv)
 
 ## License
 
@@ -588,36 +730,3 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 ## scratch
-```js
-const parts = [newHead, ...previousHeads];
-
-    /* for (let i = 1; i < parts.length; i++) {
-      const currentPart = parts[i];
-      if (currentPart.isCurve) continue;
-      // previousPart because the further away the index is from zero, the further it is from the head
-      const nextPart = parts[Math.min(i + 1, parts.length - 1)];
-      const previousPart = parts[i - 1];
-
-      if (
-        nextPart.direction !== previousPart.direction ||
-        nextDirection?.directions?.[0] !== previousPart?.directions?.[1]
-      ) {
-        const directions = [];
-        if (nextPart.direction === "down") {
-          directions.push("up");
-        } else if (nextPart.direction === "up") {
-          directions.push("down");
-        } else if (nextPart.direction === 'left') {
-          directions.push("right");
-        }
-
-        const curve = {
-          ...currentPart,
-          isCurve: true,
-          direction: null,
-          directions,
-        };
-        parts[i] = curve;
-      }
-    } */
-```
