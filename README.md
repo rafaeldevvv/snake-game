@@ -25,12 +25,12 @@ It is an implementation of the classic snake game. Try to eat as much food as yo
 
 ### Screenshots
 
-![]()
+![](./screenshot.png)
 
 ### Links
 
 - [Repository](https://github.com/rafaeldevvv/snake-game)
-- [Live site](https://rafaeldevvv.io/snake-game)
+- [Live site](https://rafaeldevvv.github.io/snake-game/)
 
 ### Links
 

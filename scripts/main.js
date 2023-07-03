@@ -3,13 +3,17 @@ import {
   elt,
   getRandomNumber,
   overlap,
-  drawChessBackground,
   getDirection,
   getAxis,
   getOppositeDirection,
-  getSpeed,
+  getNextSnakeSpeed,
 } from "./utilities.js";
 import scale from "./scale.js";
+import {
+  rotateCanvasBasedOnCurve,
+  rotateCanvasBasedOnDirection,
+  drawChessBackground,
+} from "./canvas-utilities.js";
 
 // runAnimation is here because I need to store the current animation frame id in a variable to cancel it when the user resets the game.
 let currentAnimation = null;
@@ -55,7 +59,6 @@ class Snake {
   update(timeStep, scheduledDirectionChanges) {
     let newSpeed = this.speed;
 
-    let currentAxis = getAxis(getDirection(newSpeed));
     let isChangingDirection = this.isChangingDirection;
 
     // if it is not changing direction, then we can happily steer the snake into a specific direction
@@ -65,7 +68,7 @@ class Snake {
       isChangingDirection = true;
       scheduledDirectionChanges.shift();
 
-      newSpeed = getSpeed(nextDirection, currentAxis, snakeSpeed) || newSpeed;
+      newSpeed = getNextSnakeSpeed(nextDirection, newSpeed, snakeSpeed);
     }
 
     const newHeadPosition = this.head.position.plus(newSpeed.times(timeStep));
@@ -319,7 +322,7 @@ class View {
       elt(
         "p",
         { className: "small-warning" },
-        `- Press the "Esc" key to pause the game.`
+        `- Press the "Esc" key to pause/resume the game.`
       ),
       elt(
         "p",
@@ -538,48 +541,6 @@ class View {
   }
 }
 
-// it rotates the canvas based on what directions the curve points at
-function rotateCanvasBasedOnCurve(context, directions, aroundX, aroundY) {
-  let degree;
-  if (allValuesAreIn(directions, "up", "right")) {
-    degree = 0;
-  } else if (allValuesAreIn(directions, "right", "down")) {
-    degree = 90;
-  } else if (allValuesAreIn(directions, "down", "left")) {
-    degree = 180;
-  } else if (allValuesAreIn(directions, "up", "left")) {
-    degree = 270;
-  }
-
-  rotateCanvas(context, degree, aroundX, aroundY);
-}
-
-function allValuesAreIn(array, ...values) {
-  let are = true;
-  values.forEach((v) => {
-    if (array.indexOf(v) === -1) are = false;
-  });
-
-  return are;
-}
-
-function rotateCanvasBasedOnDirection(context, direction, aroundX, aroundY) {
-  let degree = 0;
-  if (direction === "up") degree = 360;
-  else if (direction === "down") degree = 180;
-  else if (direction === "left") degree = 270;
-  else if (direction === "right") degree = 90;
-  else degree = 0;
-
-  rotateCanvas(context, degree, aroundX, aroundY);
-}
-
-function rotateCanvas(context, degree, aroundX, aroundY) {
-  context.translate(aroundX, aroundY);
-  context.rotate((degree / 360) * Math.PI * 2);
-  context.translate(-aroundX, -aroundY);
-}
-
 function getRandomFruit(limitX, limitY) {
   return new Fruit(
     getRandomNumber(0, limitX),
@@ -633,7 +594,7 @@ function runGame() {
   let scheduledDirectionChanges = [];
 
   let paused = false;
-  // we use this variable 
+  // we use this variable
   let running = false;
 
   window.addEventListener("keydown", (e) => {

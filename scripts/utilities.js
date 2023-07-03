@@ -1,4 +1,3 @@
-import scale from "./scale.js";
 import Vec from "./Vec.js";
 
 export function elt(type, attrs, ...children) {
@@ -23,15 +22,6 @@ export function overlap(actor1, actor2) {
   );
 }
 
-export function drawChessBackground(context, width, height, color1, color2) {
-  for (let y = 0; y < height; y++) {
-    for (let x = 0; x < width; x++) {
-      context.fillStyle = (x + y) % 2 === 0 ? color1 : color2;
-      context.fillRect(x * scale, y * scale, scale, scale);
-    }
-  }
-}
-
 export function getRandomNumber(min, max) {
   return Math.floor(min + (max - min) * Math.random());
 }
@@ -45,7 +35,7 @@ export function getDirection(speed) {
 
 export function getAxis(direction) {
   if (!direction) return direction;
-  
+
   if (direction === "left" || direction === "right") return "horizontal";
   if (direction === "up" || direction === "down") return "vertical";
 
@@ -71,14 +61,31 @@ export function getOppositeDirection(direction) {
   }
 }
 
-export function getSpeed(direction, axis, speed = 14) {
-  if (direction === "right" && axis !== "horizontal") {
-    return new Vec(speed, 0);
-  } else if (direction === "left" && axis !== "horizontal") {
-    return new Vec(-speed, 0);
-  } else if (direction === "down" && axis !== "vertical") {
-    return new Vec(0, speed);
-  } else if (direction === "up" && axis !== "vertical") {
-    return new Vec(0, -speed);
+export function getNextSnakeSpeed(
+  nextDirection,
+  currentSpeed,
+  snakeSpeedValue
+) {
+  const axis = getAxis(getDirection(currentSpeed));
+
+  if (nextDirection === "right" && axis !== "horizontal") {
+    return new Vec(snakeSpeedValue, 0);
+  } else if (nextDirection === "left" && axis !== "horizontal") {
+    return new Vec(-snakeSpeedValue, 0);
+  } else if (nextDirection === "down" && axis !== "vertical") {
+    return new Vec(0, snakeSpeedValue);
+  } else if (nextDirection === "up" && axis !== "vertical") {
+    return new Vec(0, -snakeSpeedValue);
   }
+
+  return currentSpeed;
+}
+
+export function allValuesAreIn(array, ...values) {
+  let are = true;
+  values.forEach((v) => {
+    if (array.indexOf(v) === -1) are = false;
+  });
+
+  return are;
 }
