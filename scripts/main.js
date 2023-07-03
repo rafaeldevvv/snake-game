@@ -149,10 +149,35 @@ class Snake {
 const eatingSoundEffect = new Audio();
 eatingSoundEffect.src = "./audio/eating.mp3";
 
+const maxOsc = 0.2;
+
 class Fruit {
-  constructor(x, y, tileX) {
-    this.position = { x, y };
+  constructor(position, tileX, osc, oscDirection) {
+    this.position = position;
     this.tileX = tileX;
+
+    // oscillation
+    this.osc = osc;
+    this.oscDirection = oscDirection;
+  }
+
+  update(timeStep) {
+    let osc = this.osc;
+
+    if (this.oscDirection === "positive") {
+      osc += timeStep * maxOsc;
+    } else {
+      osc -= timeStep * maxOsc;
+    }
+
+    let oscDirection = this.oscDirection;
+    if (osc > maxOsc) {
+      oscDirection = "negative";
+    } else if (osc < 0) {
+      oscDirection = "positive";
+    }
+
+    return new Fruit(this.position, this.tileX, osc, oscDirection);
   }
 
   // it returns a new state when it collides with the snake's head, making the snake longer
@@ -175,6 +200,17 @@ class Fruit {
       state.muted
     );
   }
+}
+
+function getRandomFruit(limitX, limitY) {
+  return new Fruit(
+    {
+      x: getRandomNumber(0, limitX),
+      y: getRandomNumber(0, limitY),
+    },
+    getRandomNumber(0, 10),
+    0
+  );
 }
 
 class State {
@@ -233,6 +269,10 @@ class State {
     const snakeHeadY = newSnake.head.position.y;
     const limitX = this.boundaries.x;
     const limitY = this.boundaries.y;
+
+    if (this.fruit) {
+      this.fruit = this.fruit.update(timeStep);
+    }
 
     let newState = new State(
       newSnake,
@@ -411,16 +451,18 @@ class View {
   drawFruit(fruit) {
     const { x, y } = fruit.position;
 
+    const scaledOsc = fruit.osc * scale;
+
     this.canvasContext.drawImage(
       fruitsSprite,
       scale * fruit.tileX,
       0,
       scale,
       scale,
-      Math.floor(x) * scale,
-      Math.floor(y) * scale,
-      scale,
-      scale
+      Math.floor(x) * scale - scaledOsc / 2,
+      Math.floor(y) * scale - scaledOsc / 2,
+      scale + scaledOsc,
+      scale + scaledOsc
     );
   }
 
@@ -541,14 +583,6 @@ class View {
   }
 }
 
-function getRandomFruit(limitX, limitY) {
-  return new Fruit(
-    getRandomNumber(0, limitX),
-    getRandomNumber(0, limitY),
-    getRandomNumber(0, 10)
-  );
-}
-
 const mapBoundaries = { x: 20, y: 20 };
 
 function runGame() {
@@ -594,7 +628,7 @@ function runGame() {
   let scheduledDirectionChanges = [];
 
   let paused = false;
-  // we use this variable
+  // we use this variable to start the game with the arrow keys
   let running = false;
 
   window.addEventListener("keydown", (e) => {
@@ -657,6 +691,72 @@ function runGame() {
       return false;
     }
   }
-  view.syncState(state);
 }
 runGame();
+
+class Presenter {
+  init(initialState, view) {
+    this.state = initialState;
+    this.view = view;
+    this.scheduledDirectionChanges = [];
+    this.isGamePaused = true;
+    document.querySelector("#wrapper").appendChild(this.view.dom);
+
+    this.view.syncState(this.state);
+    snakeSprite.onload = function () {
+      if (fruitsSprite.complete) {
+        this.view.syncState(this.state);
+      } else {
+        fruitsSprite.onload = function () {
+          this.view.syncState(this.state);
+        };
+      }
+    };
+  }
+
+  resetGame() {
+    this.state = State.start();
+    this.view.clear();
+    this.view.syncState(this.state);
+    this.scheduledDirectionChanges = [];
+    this.isGamePaused = true;
+    cancelAnimationFrame(currentAnimation);
+  }
+
+  muteOrUnmuteGame() {
+    this.state.muted = !this.state.muted;
+
+    if (!this.state.muted) {
+      backgroundSong.play();
+    } else {
+      backgroundSong.pause();
+    }
+
+    this.view.muted = this.state.muted;
+  }
+
+  onArrowPress(e) {}
+
+  runner(timeStep) {
+    if (paused) return true;
+
+    this.state = this.state.update(timeStep, this.scheduledDirectionChanges);
+
+    if (state.status === "playing") {
+      this.view.syncState(this.state);
+      return true;
+    } else {
+      this.view.endGame();
+      this.saveBestScore(this.state.bestScore);
+      return false;
+    }
+  }
+
+  saveBestScore(newBestScore) {
+    const savedBestScore = Number(localStorage.getItem("best-score"));
+
+    if (savedBestScore < newBestScore) {
+      localStorage.setItem("best-score", newBestScore);
+    }
+  }
+}
