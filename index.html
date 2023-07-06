@@ -9,13 +9,18 @@
       name="description"
       content="This is an implementation of the classic Snake Game"
     />
-    
+
     <!-- Open Graph -->
     <meta property="og:title" content="Snake Game" />
     <meta property="og:image" content="./screenshot.png" />
     <meta
       property="og:description"
       content="This is an implementation of the classic Snake Game"
+    />
+    <meta property="og:type" content="website" />
+    <meta
+      property="og:url"
+      content="https://rafaeldevvv.github.io/snake-game/"
     />
 
     <!-- Twitter -->
@@ -25,11 +30,14 @@
       name="twitter:description"
       content="This is an implementation of the classic Snake Game"
     />
+    <meta name="twitter:creator" content="rafaeldevvv" />
     <title>Snake Game</title>
 
-    <!-- scripts and links -->
+    <!-- links -->
     <link rel="stylesheet" href="./styles/index.css" />
-    <link rel="icon" type="image/x-icon" href="./images/favicon.png">
+    <link rel="icon" type="image/x-icon" href="./images/favicon.png" />
+
+    <!-- scripts -->
     <script
       src="https://kit.fontawesome.com/134d9c6f51.js"
       crossorigin="anonymous"
@@ -37,7 +45,24 @@
     <script src="scripts/main.js" type="module" defer></script>
   </head>
   <body>
-    <div id="wrapper"></div>
+    <main id="game-container">
+      <h1>Snake Game</h1>
+      <p class="small-warning">
+        - Press the "Esc" key to pause/resume the game.
+      </p>
+      <p class="small-warning">
+        - Press the arrow keys to start the game and control the snake.
+      </p>
+      <div class="score-container">
+        <span class="score score-box" id="current-score"></span>
+        <span class="best-score score-box" id="best-score"></span>
+      </div>
+      <div id="canvas-container"></div>
+      <div class="buttons">
+        <button class="btn restart-btn" id="restart-btn">Restart</button>
+        <button class="btn mute-btn" id="mute-btn"></button>
+      </div>
+    </main>
     <footer>
       Coded By <a href="https://github.com/rafaeldevvv">Rafael Maia</a>
     </footer>

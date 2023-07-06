@@ -552,6 +552,64 @@ class Fruit {
 }
 ```
 
+The second implementation introduces an oscillation to the fruit to make it stand out a little bit more:
+
+```js
+class Fruit {
+  constructor(position, tileX, osc, oscDirection) {
+    this.position = position;
+    this.tileX = tileX;
+
+    // oscillation
+    this.osc = osc;
+    this.oscDirection = oscDirection;
+  }
+
+  update(timeStep) {
+    let osc = this.osc;
+
+    if (this.oscDirection === "positive") {
+      osc += timeStep * maxFruitOsc;
+    } else {
+      osc -= timeStep * maxFruitOsc;
+    }
+
+    let oscDirection = this.oscDirection;
+    if (osc > maxFruitOsc) {
+      oscDirection = "negative";
+    } else if (osc < 0) {
+      oscDirection = "positive";
+    }
+
+    return new Fruit(this.position, this.tileX, osc, oscDirection);
+  }
+}
+```
+
+I also had to make some changes to the way the fruit was drawn with the oscillation:
+
+```js
+drawFruit(fruit) {
+  const { x, y } = fruit.position;
+
+  const scaledOsc = fruit.osc * scale;
+
+  this.canvasContext.drawImage(
+    fruitsSprite,
+    scale * fruit.tileX,
+    0,
+    scale,
+    scale,
+    Math.floor(x) * scale - scaledOsc / 2,
+    Math.floor(y) * scale - scaledOsc / 2,
+    scale + scaledOsc,
+    scale + scaledOsc
+  );
+}
+```
+
+I have to subtract half the scaled oscillation to make it stay in the center of the square and sum the normal scale with the scaled oscillation when passing the size of the fruit to the `drawImage()` method.
+
 #### View
 
 I used the canvas api to render this game because I planned to give the snake a pixel-art style skin and I would also make the fruits in pixel-art style.
@@ -730,3 +788,111 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 ## scratch
+```js
+function runGame() {
+  let state = State.start(mapBoundaries, true);
+  const view = new View(
+    mapBoundaries.x,
+    mapBoundaries.y,
+    () => {
+      state = State.start(mapBoundaries, state.muted);
+      scheduledDirectionChanges = [];
+      paused = false;
+      running = false;
+      view.clearFinalMessage();
+      view.syncState(state);
+      cancelAnimationFrame(currentAnimation);
+    },
+    () => {
+      state.muted = !state.muted;
+
+      if (!state.muted) {
+        backgroundSong.play();
+      } else {
+        backgroundSong.pause();
+      }
+
+      view.muted = state.muted;
+    }
+  );
+  view.syncState(state);
+
+  snakeSprite.onload = function () {
+    if (fruitsSprite.complete) {
+      view.syncState(state);
+    } else {
+      fruitsSprite.onload = function () {
+        view.syncState(state);
+      };
+    }
+  };
+
+  // it is used to schedule changes in the snake's direction
+  let scheduledDirectionChanges = [];
+
+  let paused = false;
+  // we use this variable to start the game with the arrow keys
+  let running = false;
+
+  window.addEventListener("keydown", (e) => {
+    // to prevent scrolling
+    if (e.key.indexOf("Arrow") !== -1) {
+      e.preventDefault();
+    }
+
+    // to start the game
+    if (!running && e.key.indexOf("Arrow") !== -1) {
+      running = true;
+      runAnimation(runner);
+    }
+
+    // to pause
+    if (e.key === "Escape") {
+      paused = !paused;
+    }
+
+    if (paused) return;
+
+    if (
+      e.key === "ArrowDown" &&
+      scheduledDirectionChanges.every((d) => getAxis(d) !== "vertical")
+    ) {
+      scheduledDirectionChanges.push("down");
+    } else if (
+      e.key === "ArrowUp" &&
+      scheduledDirectionChanges.every((d) => getAxis(d) !== "vertical")
+    ) {
+      scheduledDirectionChanges.push("up");
+    } else if (
+      e.key === "ArrowLeft" &&
+      scheduledDirectionChanges.every((d) => getAxis(d) !== "horizontal")
+    ) {
+      scheduledDirectionChanges.push("left");
+    } else if (
+      e.key === "ArrowRight" &&
+      scheduledDirectionChanges.every((d) => getAxis(d) !== "horizontal")
+    ) {
+      scheduledDirectionChanges.push("right");
+    }
+  });
+
+  // this function might be called a lot of times, so instead of defining it on the spot, I just defined it here
+  function runner(timeStep) {
+    if (paused) return true;
+
+    state = state.update(timeStep, scheduledDirectionChanges);
+
+    if (state.status === "playing") {
+      view.syncState(state);
+      return true;
+    } else {
+      view.endGame(state);
+      if (state.score > Number(localStorage.getItem("best-score"))) {
+        localStorage.setItem("best-score", state.score);
+        state.bestScore = state.score;
+      }
+      return false;
+    }
+  }
+}
+// runGame();```

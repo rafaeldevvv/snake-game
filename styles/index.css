@@ -40,7 +40,7 @@ a {
    top: 2px;
 }
 
-.reset-btn {
+.restart-btn {
    background-color: blue;
    color: white;
 }
@@ -58,6 +58,7 @@ a {
 /* The Page specific elements */
 #game-container {
    width: max-content;
+   max-width: 100%;
    margin: 2rem auto;
 }
 

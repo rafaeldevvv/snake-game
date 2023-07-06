@@ -8,12 +8,13 @@ import {
   getOppositeDirection,
   getNextSnakeSpeed,
 } from "./utilities.js";
-import scale from "./scale.js";
 import {
   rotateCanvasBasedOnCurve,
   rotateCanvasBasedOnDirection,
   drawChessBackground,
 } from "./canvas-utilities.js";
+
+import scale from "./scale.js";
 
 // runAnimation is here because I need to store the current animation frame id in a variable to cancel it when the user resets the game.
 let currentAnimation = null;
@@ -31,6 +32,7 @@ function runAnimation(frameFunction) {
 }
 
 const snakeSpeed = 14;
+const spriteScale = 20;
 
 // a loop
 const backgroundSong = new Audio("./audio/background.mp3");
@@ -61,9 +63,9 @@ class Snake {
 
     let isChangingDirection = this.isChangingDirection;
 
-    // if it is not changing direction, then we can happily steer the snake into a specific direction
     const nextDirection = scheduledDirectionChanges[0];
 
+    // if it is not changing direction, then we can happily steer the snake into a specific direction
     if (!isChangingDirection && nextDirection) {
       isChangingDirection = true;
       scheduledDirectionChanges.shift();
@@ -149,7 +151,7 @@ class Snake {
 const eatingSoundEffect = new Audio();
 eatingSoundEffect.src = "./audio/eating.mp3";
 
-const maxOsc = 0.2;
+const maxFruitOsc = 0.2;
 
 class Fruit {
   constructor(position, tileX, osc, oscDirection) {
@@ -165,13 +167,13 @@ class Fruit {
     let osc = this.osc;
 
     if (this.oscDirection === "positive") {
-      osc += timeStep * maxOsc;
+      osc += timeStep * maxFruitOsc;
     } else {
-      osc -= timeStep * maxOsc;
+      osc -= timeStep * maxFruitOsc;
     }
 
     let oscDirection = this.oscDirection;
-    if (osc > maxOsc) {
+    if (osc > maxFruitOsc) {
       oscDirection = "negative";
     } else if (osc < 0) {
       oscDirection = "positive";
@@ -327,24 +329,27 @@ class State {
 const fruitsSprite = elt("img", { src: "./images/fruits-sprite.png" });
 const snakeSprite = elt("img", { src: "./images/snake-sprite.png" });
 
+const $ = (selector) => document.querySelector(selector);
+
 class View {
-  constructor(canvasWidth, canvasHeight, onRestart, onMute) {
-    this.scoreDOM = elt("span", { className: "score score-box" });
-    this.bestScoreDOM = elt("span", { className: "best-score score-box" });
-    this.resetButton = elt(
-      "button",
-      { className: "reset-btn btn", onclick: onRestart },
-      "Restart"
-    );
-    this.muteButton = elt("button", {
-      className: "mute-btn btn",
-      onclick: onMute,
-    });
+  constructor(controller, state) {
+    this.controller = controller;
+    this.state = state;
+
+    this.canvasWidth = state.boundaries.x;
+    this.canvasHeight = state.boundaries.y;
+
+    this.scoreDOM = $("#current-score");
+    this.bestScoreDOM = $("#best-score");
+    $("#restart-btn").onclick = controller.restartGame.bind(controller);
+    this.muteButton = $("#mute-btn");
+    this.muteButton.onclick = controller.muteOrUnmuteGame.bind(controller);
 
     const canvas = elt("canvas", {
-      width: canvasWidth * scale,
-      height: canvasHeight * scale,
+      width: this.canvasWidth * scale,
+      height: this.canvasHeight * scale,
     });
+    this.canvasContext = canvas.getContext("2d");
 
     this.finalMessageContainer = elt("div");
 
@@ -355,33 +360,35 @@ class View {
       this.finalMessageContainer
     );
 
-    this.dom = elt(
-      "div",
-      { id: "game-container" },
-      elt("h1", null, "Snake Game"),
-      elt(
-        "p",
-        { className: "small-warning" },
-        `- Press the "Esc" key to pause/resume the game.`
-      ),
-      elt(
-        "p",
-        { className: "small-warning" },
-        "- Press the arrow keys to start the game and control the snake."
-      ),
-      elt(
-        "div",
-        { className: "score-container" },
-        this.scoreDOM,
-        this.bestScoreDOM
-      ),
-      this.canvasContainer,
-      elt("div", { className: "buttons" }, this.resetButton, this.muteButton)
-    );
+    $("#canvas-container").appendChild(this.canvasContainer);
 
-    this.canvasWidth = canvasWidth;
-    this.canvasHeight = canvasHeight;
-    this.canvasContext = canvas.getContext("2d");
+    this.drawBackground();
+
+    if (snakeSprite.complete) {
+      this.snake = state.snake;
+    } else {
+      snakeSprite.onload = () => (this.snake = state.snake);
+    }
+
+    if (fruitsSprite.complete) {
+      this.fruit = state.fruit;
+    } else {
+      fruitsSprite.onload = () => (this.fruit = state.fruit);
+    }
+
+    this.muted = state.muted;
+    this.bestScore = state.bestScore;
+    this.score = state.score;
+
+    window.addEventListener("keydown", (e) => {
+      if (e.key.indexOf("Arrow") !== -1) {
+        controller.onArrowPress(e);
+      }
+
+      if (e.key == "Escape") {
+        controller.onEscPress(e);
+      }
+    });
   }
 
   set score(newScore) {
@@ -392,38 +399,15 @@ class View {
     this.bestScoreDOM.textContent = "Best Score: " + newBestScore;
   }
 
-  syncState(state) {
-    const { snake, muted, score, bestScore, fruit } = state;
+  set snake(snake) {
+    this.drawSnakeHead(snake.head);
+    this.drawSnakeTail(snake.tail);
+  }
 
-    // show score
-    this.score = score;
-    this.bestScore = bestScore;
-
-    this.muted = muted;
-
-    // draw background
-    this.drawBackground();
-
-    // draw fruit
+  set fruit(fruit) {
     if (fruit) {
       this.drawFruit(fruit);
     }
-
-    // draw snake
-    const { tail } = snake;
-    this.drawSnakeHead(snake);
-    this.drawSnakeTail(tail);
-  }
-
-  endGame() {
-    this.finalMessageContainer.appendChild(
-      elt(
-        "div",
-        { className: "final-message-container" },
-        elt("p", { className: "lost-text" }, "LOST"),
-        elt("p", null, "Press the Reset button to play again")
-      )
-    );
   }
 
   set muted(muted) {
@@ -434,8 +418,24 @@ class View {
     }
   }
 
-  clear() {
+  showFinalMessage(status) {
+    const message = status.toUpperCase();
+    this.finalMessageContainer.appendChild(
+      elt(
+        "div",
+        { className: "final-message-container" },
+        elt("p", { className: "lost-text" }, message),
+        elt("p", null, "Press the Reset button to play again")
+      )
+    );
+  }
+
+  restartGame(state) {
     this.finalMessageContainer.textContent = "";
+    this.drawBackground();
+    this.snake = state.snake;
+    this.fruit = state.fruit;
+    this.score = state.score;
   }
 
   drawBackground() {
@@ -455,10 +455,10 @@ class View {
 
     this.canvasContext.drawImage(
       fruitsSprite,
-      scale * fruit.tileX,
+      spriteScale * fruit.tileX,
       0,
-      scale,
-      scale,
+      spriteScale,
+      spriteScale,
       Math.floor(x) * scale - scaledOsc / 2,
       Math.floor(y) * scale - scaledOsc / 2,
       scale + scaledOsc,
@@ -466,22 +466,21 @@ class View {
     );
   }
 
-  drawSnakeHead(snake) {
-    const head = snake.head;
+  drawSnakeHead(head) {
     let x = Math.floor(head.position.x) * scale,
       y = Math.floor(head.position.y) * scale;
 
-    let direction;
+    /* let direction;
     if (snake.isChangingDirection) {
       direction = snake.tail[0].direction;
     } else {
       direction = snake.head.direction;
-    }
+    } */
 
     this.canvasContext.save();
     rotateCanvasBasedOnDirection(
       this.canvasContext,
-      direction,
+      head.direction,
       x + 0.5 * scale,
       y + 0.5 * scale
     );
@@ -489,8 +488,8 @@ class View {
       snakeSprite,
       0,
       0,
-      scale,
-      scale,
+      spriteScale,
+      spriteScale,
       x,
       y,
       scale,
@@ -521,10 +520,10 @@ class View {
         );
         this.canvasContext.drawImage(
           snakeSprite,
-          3 * scale,
+          3 * spriteScale,
           0,
-          scale,
-          scale,
+          spriteScale,
+          spriteScale,
           x,
           y,
           scale,
@@ -543,10 +542,10 @@ class View {
         );
         this.canvasContext.drawImage(
           snakeSprite,
-          scale,
+          spriteScale,
           0,
-          scale,
-          scale,
+          spriteScale,
+          spriteScale,
           x,
           y,
           scale,
@@ -570,10 +569,10 @@ class View {
     );
     this.canvasContext.drawImage(
       snakeSprite,
-      2 * scale,
+      2 * spriteScale,
       0,
-      scale,
-      scale,
+      spriteScale,
+      spriteScale,
       x,
       y,
       scale,
@@ -585,178 +584,113 @@ class View {
 
 const mapBoundaries = { x: 20, y: 20 };
 
-function runGame() {
-  let state = State.start(mapBoundaries, true);
-  const view = new View(
-    mapBoundaries.x,
-    mapBoundaries.y,
-    () => {
-      state = State.start(mapBoundaries, state.muted);
-      scheduledDirectionChanges = [];
-      paused = false;
-      running = false;
-      view.clear();
-      view.syncState(state);
-      cancelAnimationFrame(currentAnimation);
-    },
-    () => {
-      state.muted = !state.muted;
+const directions = ["down", "up", "left", "right"];
 
-      if (!state.muted) {
-        backgroundSong.play();
-      } else {
-        backgroundSong.pause();
-      }
-
-      view.muted = state.muted;
-    }
-  );
-  document.querySelector("#wrapper").appendChild(view.dom);
-  view.syncState(state);
-
-  snakeSprite.onload = function () {
-    if (fruitsSprite.complete) {
-      view.syncState(state);
-    } else {
-      fruitsSprite.onload = function () {
-        view.syncState(state);
-      };
-    }
-  };
-
-  // it is used to schedule changes in the snake's direction
-  let scheduledDirectionChanges = [];
-
-  let paused = false;
-  // we use this variable to start the game with the arrow keys
-  let running = false;
-
-  window.addEventListener("keydown", (e) => {
-    // to prevent scrolling
-    if (e.key.indexOf("Arrow") !== -1) {
-      e.preventDefault();
-    }
-
-    // to start the game
-    if (!running && e.key.indexOf("Arrow") !== -1) {
-      running = true;
-      runAnimation(runner);
-    }
-
-    // to pause
-    if (e.key === "Escape") {
-      paused = !paused;
-    }
-
-    if (paused) return;
-
-    if (
-      e.key === "ArrowDown" &&
-      scheduledDirectionChanges.every((d) => getAxis(d) !== "vertical")
-    ) {
-      scheduledDirectionChanges.push("down");
-    } else if (
-      e.key === "ArrowUp" &&
-      scheduledDirectionChanges.every((d) => getAxis(d) !== "vertical")
-    ) {
-      scheduledDirectionChanges.push("up");
-    } else if (
-      e.key === "ArrowLeft" &&
-      scheduledDirectionChanges.every((d) => getAxis(d) !== "horizontal")
-    ) {
-      scheduledDirectionChanges.push("left");
-    } else if (
-      e.key === "ArrowRight" &&
-      scheduledDirectionChanges.every((d) => getAxis(d) !== "horizontal")
-    ) {
-      scheduledDirectionChanges.push("right");
-    }
-  });
-
-  // this function might be called a lot of times, so instead of defining it on the spot, I just defined it here
-  function runner(timeStep) {
-    if (paused) return true;
-
-    state = state.update(timeStep, scheduledDirectionChanges);
-
-    if (state.status === "playing") {
-      view.syncState(state);
-      return true;
-    } else {
-      view.endGame(state);
-      if (state.score > Number(localStorage.getItem("best-score"))) {
-        localStorage.setItem("best-score", state.score);
-        state.bestScore = state.score;
-      }
-      return false;
-    }
-  }
-}
-runGame();
-
-class Presenter {
+class Controller {
   init(initialState, view) {
     this.state = initialState;
     this.view = view;
-    this.scheduledDirectionChanges = [];
-    this.isGamePaused = true;
-    document.querySelector("#wrapper").appendChild(this.view.dom);
 
-    this.view.syncState(this.state);
-    snakeSprite.onload = function () {
-      if (fruitsSprite.complete) {
-        this.view.syncState(this.state);
-      } else {
-        fruitsSprite.onload = function () {
-          this.view.syncState(this.state);
-        };
-      }
-    };
+    this.scheduledDirectionChanges = [];
+    this.isGamePaused = false;
+    this.isGameRunning = false;
   }
 
-  resetGame() {
-    this.state = State.start();
-    this.view.clear();
-    this.view.syncState(this.state);
+  restartGame() {
+    this.state = State.start(mapBoundaries, this.state.muted);
+    this.view.restartGame(this.state);
     this.scheduledDirectionChanges = [];
-    this.isGamePaused = true;
+    this.isGameRunning = false;
     cancelAnimationFrame(currentAnimation);
   }
 
   muteOrUnmuteGame() {
-    this.state.muted = !this.state.muted;
+    const nextBoolean = !this.state.muted;
+    this.state.muted = nextBoolean;
+    this.view.muted = nextBoolean;
 
-    if (!this.state.muted) {
+    if (!nextBoolean) {
       backgroundSong.play();
     } else {
       backgroundSong.pause();
     }
-
-    this.view.muted = this.state.muted;
   }
 
-  onArrowPress(e) {}
+  syncView(state) {
+    this.view.drawBackground();
+
+    // continue to update the view appropriately
+    if (state.fruit) this.view.fruit = state.fruit;
+    if (state.snake !== this.state.snake) this.view.snake = state.snake;
+    if (state.score !== this.state.score) this.view.score = state.score;
+
+    this.state = state;
+  }
+
+  onArrowPress(e) {
+    e.preventDefault();
+
+    if (!this.isGameRunning) {
+      this.isGameRunning = true;
+      this.isGamePaused = false;
+      runAnimation((timeStep) => this.runner(timeStep));
+    }
+
+    if (this.isGamePaused) return;
+
+    const key = e.key;
+
+    let arrowDirection;
+    directions.forEach((d) => {
+      const directionRegExp = new RegExp(d, "i");
+
+      if (directionRegExp.test(key)) {
+        arrowDirection = d;
+      }
+    });
+
+    const arrowAxis = getAxis(arrowDirection);
+    if (this.scheduledDirectionChanges.every((d) => getAxis(d) !== arrowAxis)) {
+      this.scheduledDirectionChanges.push(arrowDirection);
+    }
+  }
+
+  onEscPress(e) {
+    e.preventDefault();
+
+    this.isGamePaused = !this.isGamePaused;
+  }
 
   runner(timeStep) {
-    if (paused) return true;
+    if (this.isGamePaused) return true;
 
-    this.state = this.state.update(timeStep, this.scheduledDirectionChanges);
+    const nextState = this.state.update(
+      timeStep,
+      this.scheduledDirectionChanges
+    );
 
-    if (state.status === "playing") {
-      this.view.syncState(this.state);
+    if (nextState.status === "playing") {
+      this.syncView(nextState);
       return true;
     } else {
-      this.view.endGame();
-      this.saveBestScore(this.state.bestScore);
+      this.view.showFinalMessage(nextState.status);
+      this.saveBestScore(nextState.score);
       return false;
     }
   }
 
   saveBestScore(newBestScore) {
-    const savedBestScore = Number(localStorage.getItem("best-score"));
+    const savedBestScore = this.state.bestScore;
 
     if (savedBestScore < newBestScore) {
       localStorage.setItem("best-score", newBestScore);
+      this.view.bestScore = newBestScore;
     }
   }
 }
+
+const state = State.start(mapBoundaries, true);
+const controller = new Controller();
+const view = new View(controller, state);
+
+controller.init(state, view);
