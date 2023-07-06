@@ -16,7 +16,9 @@ import {
 
 import scale from "./scale.js";
 
-// runAnimation is here because I need to store the current animation frame id in a variable to cancel it when the user resets the game.
+// runAnimation is here because I need to store the current animation frame
+//  id in a variable to cancel it when the user resets the game.
+// otherwise there'll be another running animation breaking the restarted game
 let currentAnimation = null;
 function runAnimation(frameFunction) {
   let lastTime = null;
@@ -266,54 +268,39 @@ class State {
     // update snake
     const newSnake = this.snake.update(timeStep, scheduledDirectionChanges);
 
-    // wall collision
+    // making the next if statement easier to read
     const snakeHeadX = newSnake.head.position.x;
     const snakeHeadY = newSnake.head.position.y;
     const limitX = this.boundaries.x;
     const limitY = this.boundaries.y;
 
-    if (this.fruit) {
-      this.fruit = this.fruit.update(timeStep);
+    let fruit = this.fruit;
+
+    if (fruit) {
+      fruit = this.fruit.update(timeStep);
+    } else {
+      fruit = getRandomFruit(this.boundaries.x, this.boundaries.y);
     }
 
     let newState = new State(
       newSnake,
-      this.fruit || getRandomFruit(this.boundaries.x, this.boundaries.y),
+      fruit,
       this.score,
       this.status,
       this.boundaries,
       this.bestScore,
       this.muted
     );
-
+    
+    // wall collision or tail collision
     if (
       snakeHeadX >= limitX ||
       snakeHeadY >= limitY ||
       snakeHeadX < 0 ||
-      snakeHeadY < 0
+      snakeHeadY < 0 ||
+      this.snake.tail.some((part) => overlap(part, newSnake.head))
     ) {
-      newState = new State(
-        newSnake,
-        newState.fruit,
-        this.score,
-        "lost",
-        this.boundaries,
-        newState.bestScore,
-        newState.muted
-      );
-    }
-
-    // tail collision
-    if (this.snake.tail.some((part) => overlap(part, newSnake.head))) {
-      newState = new State(
-        newSnake,
-        newState.fruit,
-        this.score,
-        "lost",
-        this.boundaries,
-        newState.bestScore,
-        newState.muted
-      );
+      newState.status = "lost";
     }
 
     // fruit collision
@@ -420,12 +407,13 @@ class View {
 
   showFinalMessage(status) {
     const message = status.toUpperCase();
+
     this.finalMessageContainer.appendChild(
       elt(
         "div",
         { className: "final-message-container" },
-        elt("p", { className: "lost-text" }, message),
-        elt("p", null, "Press the Reset button to play again")
+        elt("p", { className: "status-message" }, message),
+        elt("p", null, "Press the Restart button to play again")
       )
     );
   }
@@ -433,8 +421,8 @@ class View {
   restartGame(state) {
     this.finalMessageContainer.textContent = "";
     this.drawBackground();
-    this.snake = state.snake;
     this.fruit = state.fruit;
+    this.snake = state.snake;
     this.score = state.score;
   }
 
@@ -469,13 +457,6 @@ class View {
   drawSnakeHead(head) {
     let x = Math.floor(head.position.x) * scale,
       y = Math.floor(head.position.y) * scale;
-
-    /* let direction;
-    if (snake.isChangingDirection) {
-      direction = snake.tail[0].direction;
-    } else {
-      direction = snake.head.direction;
-    } */
 
     this.canvasContext.save();
     rotateCanvasBasedOnDirection(
