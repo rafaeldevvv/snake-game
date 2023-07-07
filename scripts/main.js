@@ -14,7 +14,15 @@ import {
   drawChessBackground,
 } from "./canvas-utilities.js";
 
-const scale = 20;
+const mapBoundaries = { x: 20, y: 20 };
+const snakeSpeed = 14;
+const spriteScale = 20;
+
+let scale = 20;
+
+if (mapBoundaries.x * scale > innerWidth) {
+  scale = (innerWidth - innerWidth / 17) / mapBoundaries.x;
+}
 
 // runAnimation is here because I need to store the current animation frame
 //  id in a variable to cancel it when the user resets the game.
@@ -32,9 +40,6 @@ function runAnimation(frameFunction) {
   }
   currentAnimation = requestAnimationFrame(frame);
 }
-
-const snakeSpeed = 14;
-const spriteScale = 20;
 
 // a loop
 const backgroundSong = new Audio("./audio/background.mp3");
@@ -317,6 +322,7 @@ const fruitsSprite = elt("img", { src: "./images/fruits-sprite.png" });
 const snakeSprite = elt("img", { src: "./images/snake-sprite.png" });
 
 const $ = (selector) => document.querySelector(selector);
+const $$ = (selector) => document.querySelectorAll(selector);
 
 class View {
   constructor(controller, state) {
@@ -349,6 +355,15 @@ class View {
 
     $("#canvas-container").appendChild(this.canvasContainer);
 
+    $$("#mobile-controller button").forEach((b) => {
+      b.onclick = function (e) {
+        controller.handleArrowPress({
+          key: this.getAttribute("data-direction"),
+          preventDefault: () => e.preventDefault(),
+        });
+      };
+    });
+
     this.drawBackground();
 
     if (snakeSprite.complete) {
@@ -371,7 +386,7 @@ class View {
       if (e.key.indexOf("Arrow") !== -1) {
         controller.handleArrowPress(e);
       }
-      
+
       if (e.key == "p") {
         controller.handlePauseGame(e);
       }
@@ -573,8 +588,6 @@ class View {
   }
 }
 
-const mapBoundaries = { x: 20, y: 20 };
-
 const directions = ["down", "up", "left", "right"];
 
 class Controller {
@@ -642,7 +655,7 @@ class Controller {
       }
     });
   }
-  
+
   scheduleDirectionChange(direction) {
     const axis = getAxis(direction);
     if (this.scheduledDirectionChanges.every((d) => getAxis(d) !== axis)) {

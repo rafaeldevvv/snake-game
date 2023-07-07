@@ -53,22 +53,33 @@
       <p class="small-warning">
         - Press the arrow keys to start the game and control the snake.
       </p>
-      <p class="small-warning">
-        - &quot;r&quot; to restart the game.
-      </p>
-      <p class="small-warning">
-        - &quot;m&quot; to mute ot unmute the game.
-      </p>
+      <p class="small-warning">- &quot;r&quot; to restart the game.</p>
+      <p class="small-warning">- &quot;m&quot; to mute ot unmute the game.</p>
       <div class="score-container">
         <span class="score score-box" id="current-score"></span>
         <span class="best-score score-box" id="best-score"></span>
       </div>
-      <div id="canvas-container"></div> <!-- ############################################################ Where the canvas goes -->
+      <div id="canvas-container"></div>
+      <!-- ############################################################ Where the canvas goes -->
       <div class="buttons">
         <button class="btn restart-btn" id="restart-btn">Restart</button>
         <button class="btn mute-btn" id="mute-btn"></button>
       </div>
       
+      <div id="mobile-controller">
+        <button title="up" data-direction="up">
+          <i class="fa-solid fa-chevron-up icon"></i>
+        </button>
+        <button title="left" data-direction="left">
+          <i class="fa-solid fa-chevron-left icon"></i>
+        </button>
+        <button title="down" data-direction="down">
+          <i class="fa-solid fa-chevron-down icon"></i>
+        </button>
+        <button title="right" data-direction="right">
+          <i class="fa-solid fa-chevron-right icon"></i>
+        </button>
+      </div>
     </main>
     <footer>
       Coded By <a href="https://github.com/rafaeldevvv">Rafael Maia</a>
