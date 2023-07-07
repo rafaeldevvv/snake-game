@@ -74,7 +74,7 @@ a {
    display: block;
 }
 
-.small-warning:nth-of-type(2) {
+.small-warning:nth-of-type(4) {
    margin-bottom: .7rem;
 }
 

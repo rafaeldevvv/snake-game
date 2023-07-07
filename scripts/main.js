@@ -291,7 +291,7 @@ class State {
       this.bestScore,
       this.muted
     );
-    
+
     // wall collision or tail collision
     if (
       snakeHeadX >= limitX ||
@@ -330,7 +330,7 @@ class View {
     this.bestScoreDOM = $("#best-score");
     $("#restart-btn").onclick = controller.restartGame.bind(controller);
     this.muteButton = $("#mute-btn");
-    this.muteButton.onclick = controller.muteOrUnmuteGame.bind(controller);
+    this.muteButton.onclick = controller.handleMuteGame.bind(controller);
 
     const canvas = elt("canvas", {
       width: this.canvasWidth * scale,
@@ -369,11 +369,17 @@ class View {
 
     window.addEventListener("keydown", (e) => {
       if (e.key.indexOf("Arrow") !== -1) {
-        controller.onArrowPress(e);
+        controller.handleArrowPress(e);
       }
-
-      if (e.key == "Escape") {
-        controller.onEscPress(e);
+      
+      if (e.key == "p") {
+        controller.handlePauseGame(e);
+      }
+      if (e.key === "m") {
+        controller.handleMuteGame(e);
+      }
+      if (e.key === "r") {
+        controller.restartGame();
       }
     });
   }
@@ -413,7 +419,7 @@ class View {
         "div",
         { className: "final-message-container" },
         elt("p", { className: "status-message" }, message),
-        elt("p", null, "Press the Restart button to play again")
+        elt("p", null, 'Press "r" to play again')
       )
     );
   }
@@ -455,15 +461,18 @@ class View {
   }
 
   drawSnakeHead(head) {
-    let x = Math.floor(head.position.x) * scale,
+    const x = Math.floor(head.position.x) * scale,
       y = Math.floor(head.position.y) * scale;
+
+    const centerX = x + 0.5 * scale,
+      centerY = y + 0.5 * scale;
 
     this.canvasContext.save();
     rotateCanvasBasedOnDirection(
       this.canvasContext,
       head.direction,
-      x + 0.5 * scale,
-      y + 0.5 * scale
+      centerX,
+      centerY
     );
     this.canvasContext.drawImage(
       snakeSprite,
@@ -486,10 +495,10 @@ class View {
       const part = tail[i];
 
       // the centers are used to rotate the canvas correctly
-      const centerX = (Math.floor(part.position.x) + 0.5) * scale,
-        centerY = (Math.floor(part.position.y) + 0.5) * scale;
       const x = Math.floor(part.position.x) * scale,
         y = Math.floor(part.position.y) * scale;
+      const centerX = x + 0.5 * scale,
+        centerY = y + 0.5 * scale;
 
       if (part.isCurve) {
         this.canvasContext.save();
@@ -585,7 +594,9 @@ class Controller {
     cancelAnimationFrame(currentAnimation);
   }
 
-  muteOrUnmuteGame() {
+  handleMuteGame(e) {
+    e.preventDefault();
+
     const nextBoolean = !this.state.muted;
     this.state.muted = nextBoolean;
     this.view.muted = nextBoolean;
@@ -608,12 +619,13 @@ class Controller {
     this.state = state;
   }
 
-  onArrowPress(e) {
+  handleArrowPress(e) {
     e.preventDefault();
 
     if (!this.isGameRunning) {
       this.isGameRunning = true;
       this.isGamePaused = false;
+      if (this.muted) this.muteOrUnmuteGame();
       runAnimation((timeStep) => this.runner(timeStep));
     }
 
@@ -636,7 +648,7 @@ class Controller {
     }
   }
 
-  onEscPress(e) {
+  handlePauseGame(e) {
     e.preventDefault();
 
     this.isGamePaused = !this.isGamePaused;
