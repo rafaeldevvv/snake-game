@@ -14,7 +14,7 @@ import {
   drawChessBackground,
 } from "./canvas-utilities.js";
 
-import scale from "./scale.js";
+const scale = 20;
 
 // runAnimation is here because I need to store the current animation frame
 //  id in a variable to cancel it when the user resets the game.
@@ -419,7 +419,7 @@ class View {
         "div",
         { className: "final-message-container" },
         elt("p", { className: "status-message" }, message),
-        elt("p", null, 'Press "r" to play again')
+        elt("p", null, 'Press "r" or "Restart" to play again')
       )
     );
   }
@@ -438,7 +438,8 @@ class View {
       this.canvasWidth,
       this.canvasHeight,
       "#00ff00",
-      "#00f000"
+      "#00f000",
+      scale
     );
   }
 
@@ -633,18 +634,19 @@ class Controller {
 
     const key = e.key;
 
-    let arrowDirection;
     directions.forEach((d) => {
       const directionRegExp = new RegExp(d, "i");
 
       if (directionRegExp.test(key)) {
-        arrowDirection = d;
+        this.scheduleDirectionChange(d);
       }
     });
-
-    const arrowAxis = getAxis(arrowDirection);
-    if (this.scheduledDirectionChanges.every((d) => getAxis(d) !== arrowAxis)) {
-      this.scheduledDirectionChanges.push(arrowDirection);
+  }
+  
+  scheduleDirectionChange(direction) {
+    const axis = getAxis(direction);
+    if (this.scheduledDirectionChanges.every((d) => getAxis(d) !== axis)) {
+      this.scheduledDirectionChanges.push(direction);
     }
   }
 

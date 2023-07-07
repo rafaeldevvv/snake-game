@@ -1,5 +1,4 @@
 import { allValuesAreIn } from "./utilities.js";
-import scale from "./scale.js";
 
 export function rotateCanvasBasedOnDirection(
   context,
@@ -44,7 +43,14 @@ export function rotateCanvasBasedOnCurve(
   rotateCanvas(context, degree, aroundX, aroundY);
 }
 
-export function drawChessBackground(context, width, height, color1, color2) {
+export function drawChessBackground(
+  context,
+  width,
+  height,
+  color1 = "white",
+  color2 = "black",
+  scale
+) {
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
       context.fillStyle = (x + y) % 2 === 0 ? color1 : color2;
