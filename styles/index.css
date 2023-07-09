@@ -51,9 +51,18 @@ a {
    color: white;
 }
 
+.pause-btn {
+   background-color: tomato;
+   color: white;
+}
+
 .small-warning {
    font-size: .7rem;
    margin-bottom: .2rem;
+}
+
+.keyboard-devices {
+   display: none;
 }
 
 /* The Page specific elements */
@@ -137,15 +146,17 @@ footer {
    background-color: rgba(0,0,0,0.3);
    padding: .7rem;
    border-radius: .4rem;
+   pointer-events: none;
 }
 
 #mobile-controller button {
    position: relative;
-   padding: 1.4rem;
+   padding: 1.6rem;
    border: 1px solid white;
    color: white;
    border-radius: .2rem;
-   font-size: 1.5rem;
+   font-size: 1.9rem;
+   pointer-events: all;
 }
 
 #mobile-controller button:active {
@@ -179,5 +190,13 @@ button[data-direction="down"] {
 @media (pointer: fine) {
    #mobile-controller {
       display: none;
+   }
+
+   .touch-screen-devices {
+      display: none;
+   }
+
+   .keyboard-devices {
+      display: block;
    }
 }

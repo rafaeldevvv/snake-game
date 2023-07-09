@@ -15,6 +15,7 @@ It is an implementation of the classic snake game. Try to eat as much food as yo
     - [Snake](#snake)
     - [Fruit](#fruit)
     - [View](#view)
+  - [Refactoring](#refactoring)
   - [Extra](#extra)
   - [Useful resources](#useful-resources)
   - [Sound Effects](#sound-effects)
@@ -41,6 +42,19 @@ It is an implementation of the classic snake game. Try to eat as much food as yo
 - HTML
 - JavaScript
 - Canvas API
+- CSS
+
+### Features
+- Ability to play the game both in desktop and mobile devices
+- Mute/Unmute button
+- Pause button
+- Restart button
+- Sound effects
+- Background song
+- Score
+- Animation
+- Visual Assets
+- Shortcuts
 
 ### Thinking
 
@@ -726,6 +740,134 @@ class View {
 }
 ```
 
+### Refactoring
+
+I replaced the `runGame()` function with the Controller class because it grew enough to deserve its own class:
+
+```js
+function runGame() {
+  // start game
+  // associate event handlers
+  // run game
+}
+
+class Controller {
+  init(state, view) {
+    // start everything
+  }
+
+  // some methods to handle events, run the game, schedule direction changes and more
+}
+```
+
+See the source code to see the classes because they're quite huge to put here.
+
+I improved the readability of the constructor function of the View class. Now you can guess what is done without reading the methods themselves.
+
+Before:
+
+```js
+class View {
+  constructor(controller, state) {
+    this.controller = controller;
+    this.state = state;
+
+    this.scoreDOM = $("#current-score");
+    this.bestScoreDOM = $("#best-score");
+    this.muteButton = $("#mute-btn");
+    this.pauseBtn = $("#pause-btn");
+
+    const canvas = elt("canvas", {
+      width: this.canvasWidth * scale,
+      height: this.canvasHeight * scale,
+    });
+
+    this.canvasContext = canvas.getContext("2d");
+
+    this.finalMessageContainer = elt("div");
+
+    this.canvasContainer = elt(
+      "div",
+      { className: "canvas-container" },
+      canvas,
+      this.finalMessageContainer
+    );
+
+    $("#canvas-container").appendChild(this.canvasContainer);
+
+    const shortcuts = [
+      { key: "p", func: () => controller.handlePauseGame() },
+      { key: "m", func: () => controller.handleMuteGame() },
+      { key: "r", func: () => controller.restartGame() },
+    ];
+
+    window.addEventListener("keydown", (e) => {
+      if (e.key.indexOf("Arrow") !== -1) {
+        e.preventDefault();
+        this.controller.handleArrowPress(e);
+      }
+
+      const index = shortcuts.findIndex((s) => s.key === e.key);
+      if (index !== -1) {
+        e.preventDefault();
+        shortcuts[index].func();
+      }
+    });
+
+    $("#restart-btn").onclick = () => this.controller.restartGame();
+    this.muteButton.onclick = () => this.controller.handleMuteGame();
+    this.pauseBtn.onclick = () => controller.handlePauseGame();
+
+    $$("#mobile-controller button").forEach((b) => {
+      b.onclick = function (e) {
+        controller.handleArrowPress({
+          key: this.getAttribute("data-direction"),
+        });
+      };
+    });
+
+    this.drawBackground();
+
+    if (snakeSprite.complete) {
+      this.snake = state.snake;
+    } else {
+      snakeSprite.onload = () => (this.snake = state.snake);
+    }
+
+    if (fruitsSprite.complete) {
+      this.fruit = state.fruit;
+    } else {
+      fruitsSprite.onload = () => (this.fruit = state.fruit);
+    }
+
+    this.muted = state.muted;
+    this.paused = this.controller.isGamePaused;
+    this.bestScore = state.bestScore;
+    this.score = state.score;
+  }
+}
+```
+
+After:
+
+```js
+class View {
+  constructor(controller, state, shortcuts) {
+    this.controller = controller;
+    this.state = state;
+    this.shortcuts = shortcuts;
+
+    this.canvasWidth = state.boundaries.x;
+    this.canvasHeight = state.boundaries.y;
+
+    this.createCanvas();
+    this.getReferences();
+    this.registerEventHandlers();
+    this.init(state);
+  }
+}
+```
+
 ### Extra
 
 I just discovered this shorthand to round a number down:
@@ -741,6 +883,39 @@ if (
   // if any axis position is different from what it was before, then the direction changed successfully
   isChangingDirection = false;
 }
+```
+
+I put some extra metadata that I just learned about in the HTML head:
+
+```html
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta http-equiv="X-UA-Compatible" content="ie=edge" />
+<meta name="author" content="Rafael Maia" />
+<meta
+  name="description"
+  content="This is an implementation of the classic Snake Game"
+/>
+
+<!-- Open Graph -->
+<meta property="og:title" content="Snake Game" />
+<meta property="og:image" content="./screenshot.png" />
+<meta
+  property="og:description"
+  content="This is an implementation of the classic Snake Game"
+/>
+<meta property="og:type" content="website" />
+<meta property="og:url" content="https://rafaeldevvv.github.io/snake-game/" />
+
+<!-- Twitter -->
+<meta name="twitter:image" content="./screenshot.png" />
+<meta name="twitter:title" content="Snake Game" />
+<meta
+  name="twitter:description"
+  content="This is an implementation of the classic Snake Game"
+/>
+<meta name="twitter:creator" content="rafaeldevvv" />
+<title>Snake Game</title>
 ```
 
 ### Useful Resources
@@ -788,7 +963,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 ## scratch
-```js
+
+````js
 function runGame() {
   let state = State.start(mapBoundaries, true);
   const view = new View(
@@ -896,3 +1072,4 @@ function runGame() {
   }
 }
 // runGame();```
+````

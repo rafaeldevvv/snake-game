@@ -15,7 +15,7 @@ import {
 } from "./canvas-utilities.js";
 
 const mapBoundaries = { x: 20, y: 20 };
-const snakeSpeed = 14;
+const snakeSpeed = 13;
 const spriteScale = 20;
 
 let scale = 20;
@@ -25,7 +25,7 @@ if (mapBoundaries.x * scale > innerWidth) {
 }
 
 // runAnimation is here because I need to store the current animation frame
-//  id in a variable to cancel it when the user resets the game.
+// id in a variable to cancel it when the user resets the game.
 // otherwise there'll be another running animation breaking the restarted game
 let currentAnimation = null;
 function runAnimation(frameFunction) {
@@ -325,23 +325,84 @@ const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => document.querySelectorAll(selector);
 
 class View {
-  constructor(controller, state) {
+  constructor(state, controller, shortcuts) {
     this.controller = controller;
     this.state = state;
+    this.shortcuts = shortcuts;
 
     this.canvasWidth = state.boundaries.x;
     this.canvasHeight = state.boundaries.y;
 
+    this.createCanvas();
+    this.getReferences();
+    this.registerEventHandlers();
+    this.init(state);
+  }
+
+  init(state) {
+    this.drawBackground();
+
+    if (snakeSprite.complete) {
+      this.drawSnake(state.snake);
+    } else {
+      snakeSprite.onload = () => (this.drawSnake(state.snake));
+    }
+
+    if (fruitsSprite.complete) {
+      this.drawFruit(state.fruit);
+    } else {
+      fruitsSprite.onload = () => (this.drawFruit(state.fruit));
+    }
+
+    this.muted = state.muted;
+    this.paused = this.controller.isGamePaused;
+    this.bestScore = state.bestScore;
+    this.score = state.score;
+  }
+
+  getReferences() {
     this.scoreDOM = $("#current-score");
     this.bestScoreDOM = $("#best-score");
-    $("#restart-btn").onclick = controller.restartGame.bind(controller);
     this.muteButton = $("#mute-btn");
-    this.muteButton.onclick = controller.handleMuteGame.bind(controller);
+    this.pauseBtn = $("#pause-btn");
+  }
 
+  registerEventHandlers() {
+    // for keyboard
+    window.addEventListener("keydown", (e) => {
+      if (e.key.indexOf("Arrow") !== -1) {
+        e.preventDefault();
+        this.controller.handleArrowPress(e);
+      }
+
+      const index = this.shortcuts.findIndex((s) => s.key === e.key);
+      if (index !== -1) {
+        e.preventDefault();
+        this.shortcuts[index].func();
+      }
+    });
+
+    // buttons
+    $("#restart-btn").onclick = () => this.controller.restartGame();
+    this.muteButton.onclick = () => this.controller.handleMuteGame();
+    this.pauseBtn.onclick = () => controller.handlePauseGame();
+
+    // mobile controller
+    $$("#mobile-controller button").forEach((b) => {
+      b.onclick = function (e) {
+        controller.handleArrowPress({
+          key: this.getAttribute("data-direction"),
+        });
+      };
+    });
+  }
+
+  createCanvas() {
     const canvas = elt("canvas", {
       width: this.canvasWidth * scale,
       height: this.canvasHeight * scale,
     });
+
     this.canvasContext = canvas.getContext("2d");
 
     this.finalMessageContainer = elt("div");
@@ -354,49 +415,18 @@ class View {
     );
 
     $("#canvas-container").appendChild(this.canvasContainer);
+  }
 
-    $$("#mobile-controller button").forEach((b) => {
-      b.onclick = function (e) {
-        controller.handleArrowPress({
-          key: this.getAttribute("data-direction"),
-          preventDefault: () => e.preventDefault(),
-        });
-      };
-    });
-
+  syncState(state) {
+    // continue to update the view appropriately
     this.drawBackground();
+    if(state.fruit) this.drawFruit(state.fruit);
+    this.drawSnake(state.snake);
 
-    if (snakeSprite.complete) {
-      this.snake = state.snake;
-    } else {
-      snakeSprite.onload = () => (this.snake = state.snake);
-    }
+    if (state.score !== this.state.score) this.score = state.score;
+    if (state.score > state.bestScore) this.bestScore = state.score;
 
-    if (fruitsSprite.complete) {
-      this.fruit = state.fruit;
-    } else {
-      fruitsSprite.onload = () => (this.fruit = state.fruit);
-    }
-
-    this.muted = state.muted;
-    this.bestScore = state.bestScore;
-    this.score = state.score;
-
-    window.addEventListener("keydown", (e) => {
-      if (e.key.indexOf("Arrow") !== -1) {
-        controller.handleArrowPress(e);
-      }
-
-      if (e.key == "p") {
-        controller.handlePauseGame(e);
-      }
-      if (e.key === "m") {
-        controller.handleMuteGame(e);
-      }
-      if (e.key === "r") {
-        controller.restartGame();
-      }
-    });
+    this.state = state;
   }
 
   set score(newScore) {
@@ -407,15 +437,9 @@ class View {
     this.bestScoreDOM.textContent = "Best Score: " + newBestScore;
   }
 
-  set snake(snake) {
+  drawSnake(snake) {
     this.drawSnakeHead(snake.head);
     this.drawSnakeTail(snake.tail);
-  }
-
-  set fruit(fruit) {
-    if (fruit) {
-      this.drawFruit(fruit);
-    }
   }
 
   set muted(muted) {
@@ -423,6 +447,14 @@ class View {
       this.muteButton.innerHTML = '<i class="fa-solid fa-volume-xmark"></i>';
     } else {
       this.muteButton.innerHTML = '<i class="fa-solid fa-volume-high"></i>';
+    }
+  }
+
+  set paused(paused) {
+    if (paused) {
+      this.pauseBtn.innerHTML = '<i class="fa-solid fa-play"></i>';
+    } else {
+      this.pauseBtn.innerHTML = '<i class="fa-solid fa-pause"></i>';
     }
   }
 
@@ -442,10 +474,9 @@ class View {
   restartGame(state) {
     this.finalMessageContainer.textContent = "";
     this.drawBackground();
-    this.fruit = state.fruit;
-    this.snake = state.snake;
-    this.score = state.score;
+    this.syncState(state);
   }
+
 
   drawBackground() {
     drawChessBackground(
@@ -591,8 +622,8 @@ class View {
 const directions = ["down", "up", "left", "right"];
 
 class Controller {
-  init(initialState, view) {
-    this.state = initialState;
+  init(state, view) {
+    this.state = state;
     this.view = view;
 
     this.scheduledDirectionChanges = [];
@@ -608,9 +639,7 @@ class Controller {
     cancelAnimationFrame(currentAnimation);
   }
 
-  handleMuteGame(e) {
-    e.preventDefault();
-
+  handleMuteGame() {
     const nextBoolean = !this.state.muted;
     this.state.muted = nextBoolean;
     this.view.muted = nextBoolean;
@@ -622,24 +651,11 @@ class Controller {
     }
   }
 
-  syncView(state) {
-    this.view.drawBackground();
-
-    // continue to update the view appropriately
-    if (state.fruit) this.view.fruit = state.fruit;
-    if (state.snake !== this.state.snake) this.view.snake = state.snake;
-    if (state.score !== this.state.score) this.view.score = state.score;
-
-    this.state = state;
-  }
-
   handleArrowPress(e) {
-    e.preventDefault();
-
     if (!this.isGameRunning) {
       this.isGameRunning = true;
       this.isGamePaused = false;
-      if (this.muted) this.muteOrUnmuteGame();
+      this.view.paused = false;
       runAnimation((timeStep) => this.runner(timeStep));
     }
 
@@ -663,26 +679,25 @@ class Controller {
     }
   }
 
-  handlePauseGame(e) {
-    e.preventDefault();
-
+  handlePauseGame() {
     this.isGamePaused = !this.isGamePaused;
+    this.view.paused = this.isGamePaused;
   }
 
   runner(timeStep) {
     if (this.isGamePaused) return true;
 
-    const nextState = this.state.update(
+    this.state = this.state.update(
       timeStep,
       this.scheduledDirectionChanges
     );
 
-    if (nextState.status === "playing") {
-      this.syncView(nextState);
+    if (this.state.status === "playing") {
+      this.view.syncState(this.state);
       return true;
     } else {
-      this.view.showFinalMessage(nextState.status);
-      this.saveBestScore(nextState.score);
+      this.view.showFinalMessage(this.state.status);
+      this.saveBestScore(this.state.score);
       return false;
     }
   }
@@ -699,6 +714,13 @@ class Controller {
 
 const state = State.start(mapBoundaries, true);
 const controller = new Controller();
-const view = new View(controller, state);
+
+const shortcuts = [
+  { key: "p", func: () => controller.handlePauseGame() },
+  { key: "m", func: () => controller.handleMuteGame() },
+  { key: "r", func: () => controller.restartGame() },
+];
+
+const view = new View(state, controller, shortcuts);
 
 controller.init(state, view);
