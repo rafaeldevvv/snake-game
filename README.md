@@ -936,7 +936,7 @@ I put some extra metadata that I just learned about in the HTML head:
 - Twitter => [@rafaeldevvv](https://www.twitter.com/rafaeldevvv)
 - Instagram => [@rafaeldevvv](https://www.instagram.com/rafaeldevvv)
 - YouTube => [@rafaelmaia4836](https://www.youtube.com/channel/UC_QOvDZdUskTSJ59eMDjuEg)
-- GitHub => [@rafaeldevvv](https://gtihub.com/rafaeldevvv)
+- GitHub => [@rafaeldevvv](https://github.com/rafaeldevvv)
 
 ## License
 

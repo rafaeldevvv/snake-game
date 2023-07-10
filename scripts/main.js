@@ -202,7 +202,7 @@ class Fruit {
     return new State(
       longerSnake,
       null,
-      state.score + (this.score || 1),
+      state.score + 1,
       state.status,
       state.boundaries,
       state.bestScore,
@@ -354,10 +354,10 @@ class View {
       fruitsSprite.onload = () => (this.drawFruit(state.fruit));
     }
 
-    this.muted = state.muted;
-    this.paused = this.controller.isGamePaused;
-    this.bestScore = state.bestScore;
-    this.score = state.score;
+    this.syncMuted(state.muted);
+    this.syncPaused(this.controller.isGamePaused);
+    this.setBestScore(state.bestScore);
+    this.setScore(state.score);
   }
 
   getReferences() {
@@ -385,12 +385,12 @@ class View {
     // buttons
     $("#restart-btn").onclick = () => this.controller.restartGame();
     this.muteButton.onclick = () => this.controller.handleMuteGame();
-    this.pauseBtn.onclick = () => controller.handlePauseGame();
+    this.pauseBtn.onclick = () => this.controller.handlePauseGame();
 
     // mobile controller
     $$("#mobile-controller button").forEach((b) => {
       b.onclick = function (e) {
-        controller.handleArrowPress({
+        this.controller.handleArrowPress({
           key: this.getAttribute("data-direction"),
         });
       };
@@ -423,17 +423,21 @@ class View {
     if(state.fruit) this.drawFruit(state.fruit);
     this.drawSnake(state.snake);
 
-    if (state.score !== this.state.score) this.score = state.score;
-    if (state.score > state.bestScore) this.bestScore = state.score;
+    if (state.score !== this.state.score) {
+      this.setScore(state.score);
+    } 
+    if (state.score > state.bestScore) {
+      this.setBestScore(state.score);
+    }
 
     this.state = state;
   }
 
-  set score(newScore) {
+  setScore(newScore) {
     this.scoreDOM.textContent = "Score: " + newScore;
   }
 
-  set bestScore(newBestScore) {
+  setBestScore(newBestScore) {
     this.bestScoreDOM.textContent = "Best Score: " + newBestScore;
   }
 
@@ -442,7 +446,7 @@ class View {
     this.drawSnakeTail(snake.tail);
   }
 
-  set muted(muted) {
+  syncMuted(muted) {
     if (muted) {
       this.muteButton.innerHTML = '<i class="fa-solid fa-volume-xmark"></i>';
     } else {
@@ -450,7 +454,7 @@ class View {
     }
   }
 
-  set paused(paused) {
+  syncPaused(paused) {
     if (paused) {
       this.pauseBtn.innerHTML = '<i class="fa-solid fa-play"></i>';
     } else {
@@ -465,7 +469,7 @@ class View {
       elt(
         "div",
         { className: "final-message-container" },
-        elt("p", { className: "status-message" }, message),
+        elt("p", { className: "status-message" }, "Game Over"),
         elt("p", null, 'Press "r" or "Restart" to play again')
       )
     );
@@ -642,7 +646,7 @@ class Controller {
   handleMuteGame() {
     const nextBoolean = !this.state.muted;
     this.state.muted = nextBoolean;
-    this.view.muted = nextBoolean;
+    this.view.syncMuted(nextBoolean);
 
     if (!nextBoolean) {
       backgroundSong.play();
@@ -655,7 +659,7 @@ class Controller {
     if (!this.isGameRunning) {
       this.isGameRunning = true;
       this.isGamePaused = false;
-      this.view.paused = false;
+      this.view.syncPaused(false);
       runAnimation((timeStep) => this.runner(timeStep));
     }
 
@@ -681,7 +685,7 @@ class Controller {
 
   handlePauseGame() {
     this.isGamePaused = !this.isGamePaused;
-    this.view.paused = this.isGamePaused;
+    this.view.syncPaused(this.isGamePaused);
   }
 
   runner(timeStep) {
@@ -707,7 +711,7 @@ class Controller {
 
     if (savedBestScore < newBestScore) {
       localStorage.setItem("best-score", newBestScore);
-      this.view.bestScore = newBestScore;
+      this.view.setBestScore(newBestScore);
     }
   }
 }
