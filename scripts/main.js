@@ -462,15 +462,12 @@ class View {
     }
   }
 
-  showFinalMessage(status) {
-    const message = status.toUpperCase();
-
+  showFinalMessage() {
     this.finalMessageContainer.appendChild(
       elt(
         "div",
         { className: "final-message-container" },
-        elt("p", { className: "status-message" }, "Game Over"),
-        elt("p", null, 'Press "r" or "Restart" to play again')
+        elt("p", { className: "message" }, "Game Over"),
       )
     );
   }
