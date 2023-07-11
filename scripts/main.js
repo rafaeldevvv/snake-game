@@ -20,8 +20,9 @@ const spriteScale = 20;
 
 let scale = 20;
 
+// the innerWidth is divided by fourteen to give space to side margin or padding
 if (mapBoundaries.x * scale > innerWidth) {
-  scale = (innerWidth - innerWidth / 17) / mapBoundaries.x;
+  scale = (innerWidth - innerWidth / 14) / mapBoundaries.x;
 }
 
 // runAnimation is here because I need to store the current animation frame
@@ -482,8 +483,8 @@ class View {
       this.canvasContext,
       this.canvasWidth,
       this.canvasHeight,
-      "#00ff00",
-      "#00f000",
+      "#180",
+      "#190",
       scale
     );
   }

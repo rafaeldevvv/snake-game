@@ -4,6 +4,10 @@
    box-sizing: border-box;
 }
 
+html {
+   font-size: 20px;
+}
+
 /* #### ELEMENTS #### */
 body {
    font-family: sans-serif;
@@ -18,7 +22,7 @@ button {
 
 h1 {
    text-align: center;
-   margin-bottom: .5rem;
+   margin-bottom: .8rem;
 }
 
 a {
@@ -55,11 +59,6 @@ a {
    color: white;
 }
 
-.small-warning {
-   font-size: .7rem;
-   margin-bottom: .2rem;
-}
-
 [class*="keyboard-devices"] {
    display: none;
 }
@@ -69,13 +68,14 @@ a {
    width: max-content;
    max-width: 100%;
    margin: 2rem auto;
-   padding: min(.7rem, 2vw);
+   padding-inline: min(1rem, 4vw);
 }
 
 .warnings {
-   margin-bottom: .7rem;
+   margin-bottom: .85rem;
    list-style-type: square;
    padding-left: 1rem;
+   font-size: .8rem;
 }
 
 .score-container {
@@ -115,7 +115,6 @@ a {
    text-align: center;
    padding: .8rem 2.5rem;
    width: max-content;
-   /* box-shadow: 0 0 15px -3px black; */
 }
 
 .message {
@@ -146,7 +145,7 @@ footer {
       ".... up   ....."
       "left down right";
    gap: .5rem;
-   max-width: 200px;
+   width: max-content;
    background-color: rgba(0,0,0,0.3);
    padding: .7rem;
    border-radius: .4rem;
@@ -155,11 +154,11 @@ footer {
 
 #virtual-controls button {
    position: relative;
-   padding: 1.6rem;
+   padding: .5rem .6rem;
    border: 1px solid white;
    color: white;
    border-radius: .2rem;
-   font-size: 1.9rem;
+   font-size: 2.3rem;
    pointer-events: all;
 }
 
@@ -171,10 +170,10 @@ footer {
 }
 
 #virtual-controls button .icon {
-   position: absolute;
+   /* position: absolute;
    left: 50%;
    top: 50%;
-   transform: translate(-50%, -50%);
+   transform: translate(-50%, -50%); */
 }
 
 button[data-direction="up"] {
@@ -194,7 +193,7 @@ button[data-direction="down"] {
 }
 
 @media (pointer: fine) {
-   #mobile-controller {
+   #virtual-controls {
       display: none;
    }
 
