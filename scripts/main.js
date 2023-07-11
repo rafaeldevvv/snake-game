@@ -122,6 +122,7 @@ class Snake {
       }
 
       previousHeads.unshift(currentHead);
+      // if the square in which the head of the snake is different, then the direction was changed successfully
       isChangingDirection = false;
     }
 
@@ -309,7 +310,7 @@ class State {
     }
 
     // fruit collision
-    if (this.fruit !== null && overlap(this.fruit, newSnake.head)) {
+    if (fruit !== null && overlap(fruit, newSnake.head)) {
       newState = this.fruit.collide(newState);
     }
 
