@@ -366,22 +366,16 @@ class View {
 
   syncMuted(muted) {
     const m = `<span class="keyboard-devices-inline">(M)</span>`;
+    const volumeIcon = muted ? "xmark" : "high";
 
-    if (muted) {
-      this.muteButton.innerHTML = `<i class="fa-solid fa-volume-xmark"></i> ${m}`;
-    } else {
-      this.muteButton.innerHTML = `<i class="fa-solid fa-volume-high"></i> ${m}`;
-    }
+    this.muteButton.innerHTML = `<i class="fa-solid fa-volume-${volumeIcon}"></i> ${m}`;
   }
 
   syncPaused(paused) {
     const p = '<span class="keyboard-devices-inline">(P)</span>';
+    const playIcon = paused ? "play" : "pause";
 
-    if (paused) {
-      this.pauseBtn.innerHTML = `<i class="fa-solid fa-play"></i> ${p}`;
-    } else {
-      this.pauseBtn.innerHTML = `<i class="fa-solid fa-pause"></i> ${p}`;
-    }
+    this.pauseBtn.innerHTML = `<i class="fa-solid fa-${playIcon}"></i> ${p}`;
   }
 
   showFinalMessage() {
