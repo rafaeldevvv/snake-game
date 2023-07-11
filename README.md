@@ -15,6 +15,7 @@ It is an implementation of the classic snake game. Try to eat as much food as yo
     - [Snake](#snake)
     - [Fruit](#fruit)
     - [View](#view)
+  - [Virtual Controls](#virtual-controls)
   - [Refactoring](#refactoring)
   - [Extra](#extra)
   - [Useful resources](#useful-resources)
@@ -45,6 +46,7 @@ It is an implementation of the classic snake game. Try to eat as much food as yo
 - CSS
 
 ### Features
+
 - Ability to play the game both in desktop and mobile devices
 - Mute/Unmute button
 - Pause button
@@ -818,7 +820,7 @@ class View {
     this.muteButton.onclick = () => this.controller.handleMuteGame();
     this.pauseBtn.onclick = () => controller.handlePauseGame();
 
-    $$("#mobile-controller button").forEach((b) => {
+    $$("#virtual-controls button").forEach((b) => {
       b.onclick = function (e) {
         controller.handleArrowPress({
           key: this.getAttribute("data-direction"),
@@ -864,6 +866,51 @@ class View {
     this.getReferences();
     this.registerEventHandlers();
     this.init(state);
+  }
+}
+```
+
+### Virtual Controls
+
+These are implemented in the HTML itself
+
+```html
+<div id="virtual-controls" class="touch-screen-devices">
+  <button title="up" data-direction="up">
+    <i class="fa-solid fa-chevron-up icon"></i>
+  </button>
+  <button title="left" data-direction="left">
+    <i class="fa-solid fa-chevron-left icon"></i>
+  </button>
+  <button title="down" data-direction="down">
+    <i class="fa-solid fa-chevron-down icon"></i>
+  </button>
+  <button title="right" data-direction="right">
+    <i class="fa-solid fa-chevron-right icon"></i>
+  </button>
+</div>
+```
+
+And I used this feature of `@media` to see if the device used keyboard
+
+```css
+@media (pointer: fine) {
+  #mobile-controller {
+    display: none;
+  }
+
+  .touch-screen-devices {
+    display: none;
+  }
+
+  .keyboard-devices-inline {
+    display: inline;
+  }
+  .keyboard-devices-block {
+    display: block;
+  }
+  li.keyboard-devices {
+    display: list-item;
   }
 }
 ```

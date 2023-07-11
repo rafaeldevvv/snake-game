@@ -442,8 +442,8 @@ class View {
     this.muteButton.onclick = () => controller.handleMuteGame();
     this.pauseBtn.onclick = () => controller.handlePauseGame();
 
-    // mobile controller
-    $$("#mobile-controller button").forEach((b) => {
+    // virtual controls
+    $$("#virtual-controls button").forEach((b) => {
       b.onclick = function (e) {
         controller.handleArrowPress({
           key: this.getAttribute("data-direction"),
