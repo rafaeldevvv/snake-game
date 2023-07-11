@@ -47,10 +47,9 @@
   <body>
     <main id="game-container">
       <h1>Snake Game</h1>
+      <h2>By <a href="https://github.com/rafaeldevvv">Rafael Maia</a></h2>
       <ul class="warnings">
-        <li>
-          Press the arrow keys to start the game and control the snake.
-        </li>
+        <li>Press the arrow keys to start the game and control the snake.</li>
       </ul>
       <div class="score-container">
         <span class="score score-box" id="current-score"></span>
@@ -58,14 +57,28 @@
       </div>
       <div id="canvas-container"></div>
       <!-- ############################################################ Where the canvas goes -->
-      <div class="buttons">
-        <button class="btn restart-btn" id="restart-btn" title="Press 'R' to restart the game">Restart <span class="keyboard-devices-inline">(R)</span></button>
+      <div id="buttons-below-canvas">
+        <button
+          class="btn restart-btn"
+          id="restart-btn"
+          title="Press 'R' to restart the game"
+        >
+          Restart <span class="keyboard-devices-inline">(R)</span>
+        </button>
         <div>
-          <button class="btn mute-btn" id="mute-btn" title="Press 'M' to mute/unmute the game"></button>
-          <button class="btn pause-btn" id="pause-btn" title="Press 'P' to pause/resume the game"></button>
+          <button
+            class="btn mute-btn"
+            id="mute-btn"
+            title="Press 'M' to mute/unmute the game"
+          ></button>
+          <button
+            class="btn pause-btn"
+            id="pause-btn"
+            title="Press 'P' to pause/resume the game"
+          ></button>
         </div>
       </div>
-      
+
       <div id="virtual-controls" class="touch-screen-devices">
         <button title="up" data-direction="up">
           <i class="fa-solid fa-chevron-up icon"></i>
@@ -81,8 +94,5 @@
         </button>
       </div>
     </main>
-    <footer>
-      Coded By <a href="https://github.com/rafaeldevvv">Rafael Maia</a>
-    </footer>
   </body>
 </html>

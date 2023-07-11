@@ -20,9 +20,18 @@ button {
    cursor: pointer;
 }
 
-h1 {
+h1,
+h2 {
    text-align: center;
+}
+
+h1 {
+   margin-bottom: .2rem;
+}
+
+h2 {
    margin-bottom: .8rem;
+   font-size: .8rem;
 }
 
 a {
@@ -64,10 +73,10 @@ a {
 }
 
 /* The Page specific elements */
-#game-container {
-   width: max-content;
+main#game-container {
+   width: min-content;
    max-width: 100%;
-   margin: 2rem auto;
+   margin: 2rem auto 15rem;
    padding-inline: min(1rem, 4vw);
 }
 
@@ -90,7 +99,6 @@ a {
    display: block;
 }
 
-
 .score {
    background-color: red;
    color: white;
@@ -109,7 +117,7 @@ a {
    left: 50%;
    top: 50%;
    transform: translate(-50%, -50%);
-   background-color: rgba(0,0,0,0.3);
+   background-color: rgba(0, 0, 0, 0.3);
    border-radius: .5rem;
    color: white;
    text-align: center;
@@ -124,15 +132,10 @@ a {
    margin-bottom: .5rem;
 }
 
-.buttons {
+#buttons-below-canvas {
    display: flex;
    justify-content: space-between;
    margin: .5rem 0;
-}
-
-footer {
-   text-align: center;
-   margin-bottom: 3rem;
 }
 
 #virtual-controls {
@@ -146,7 +149,7 @@ footer {
       "left down right";
    gap: .5rem;
    width: max-content;
-   background-color: rgba(0,0,0,0.3);
+   background-color: rgba(0, 0, 0, 0.3);
    padding: .7rem;
    border-radius: .4rem;
    pointer-events: none;
@@ -155,6 +158,8 @@ footer {
 #virtual-controls button {
    position: relative;
    padding: .5rem .6rem;
+   aspect-ratio: 1;
+   width: 70px;
    border: 1px solid white;
    color: white;
    border-radius: .2rem;
@@ -165,15 +170,13 @@ footer {
 #virtual-controls button:active {
    color: black;
    background-color: white;
-   transition-property: background-color, color;
-   transition-duration: 1s;
 }
 
 #virtual-controls button .icon {
-   /* position: absolute;
+   position: absolute;
    left: 50%;
    top: 50%;
-   transform: translate(-50%, -50%); */
+   transform: translate(-50%, -50%);
 }
 
 button[data-direction="up"] {
@@ -193,6 +196,10 @@ button[data-direction="down"] {
 }
 
 @media (pointer: fine) {
+   main#game-container {
+      margin-bottom: 5rem;
+   }
+
    #virtual-controls {
       display: none;
    }
@@ -204,9 +211,11 @@ button[data-direction="down"] {
    .keyboard-devices-inline {
       display: inline;
    }
+
    .keyboard-devices-block {
       display: block;
    }
+
    li.keyboard-devices {
       display: list-item;
    }
