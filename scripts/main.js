@@ -368,11 +368,13 @@ class View {
   }
 
   registerEventHandlers() {
+    const controller = this.controller;
+
     // for keyboard
     window.addEventListener("keydown", (e) => {
       if (e.key.indexOf("Arrow") !== -1) {
         e.preventDefault();
-        this.controller.handleArrowPress(e);
+        controller.handleArrowPress(e);
       }
 
       const index = this.shortcuts.findIndex((s) => s.key === e.key);
@@ -383,14 +385,14 @@ class View {
     });
 
     // buttons
-    $("#restart-btn").onclick = () => this.controller.restartGame();
-    this.muteButton.onclick = () => this.controller.handleMuteGame();
-    this.pauseBtn.onclick = () => this.controller.handlePauseGame();
+    $("#restart-btn").onclick = () => controller.restartGame();
+    this.muteButton.onclick = () => controller.handleMuteGame();
+    this.pauseBtn.onclick = () => controller.handlePauseGame();
 
     // mobile controller
     $$("#mobile-controller button").forEach((b) => {
       b.onclick = function (e) {
-        this.controller.handleArrowPress({
+        controller.handleArrowPress({
           key: this.getAttribute("data-direction"),
         });
       };
@@ -447,18 +449,22 @@ class View {
   }
 
   syncMuted(muted) {
+    const m = `<span class="keyboard-devices-inline">(M)</span>`;
+    
     if (muted) {
-      this.muteButton.innerHTML = '<i class="fa-solid fa-volume-xmark"></i>';
+      this.muteButton.innerHTML = `<i class="fa-solid fa-volume-xmark"></i> ${m}`;
     } else {
-      this.muteButton.innerHTML = '<i class="fa-solid fa-volume-high"></i>';
+      this.muteButton.innerHTML = `<i class="fa-solid fa-volume-high"></i> ${m}`;
     }
   }
 
   syncPaused(paused) {
+    const p = '<span class="keyboard-devices-inline">(P)</span>';
+
     if (paused) {
-      this.pauseBtn.innerHTML = '<i class="fa-solid fa-play"></i>';
+      this.pauseBtn.innerHTML = `<i class="fa-solid fa-play"></i> ${p}`;
     } else {
-      this.pauseBtn.innerHTML = '<i class="fa-solid fa-pause"></i>';
+      this.pauseBtn.innerHTML = `<i class="fa-solid fa-pause"></i> ${p}`;
     }
   }
 

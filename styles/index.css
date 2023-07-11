@@ -60,7 +60,7 @@ a {
    margin-bottom: .2rem;
 }
 
-.keyboard-devices {
+[class*="keyboard-devices"] {
    display: none;
 }
 
@@ -166,6 +166,8 @@ footer {
 #mobile-controller button:active {
    color: black;
    background-color: white;
+   transition-property: background-color, color;
+   transition-duration: 1s;
 }
 
 #mobile-controller button .icon {
@@ -200,7 +202,13 @@ button[data-direction="down"] {
       display: none;
    }
 
-   .keyboard-devices {
+   .keyboard-devices-inline {
+      display: inline;
+   }
+   .keyboard-devices-block {
       display: block;
+   }
+   li.keyboard-devices {
+      display: list-item;
    }
 }

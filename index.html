@@ -48,17 +48,8 @@
     <main id="game-container">
       <h1>Snake Game</h1>
       <ul class="warnings">
-        <li class="small-warning keyboard-devices">
-          Press the &quot;p&quot; key to pause/resume the game.
-        </li>
         <li class="small-warning">
           Press the arrow keys to start the game and control the snake.
-        </li>
-        <li class="small-warning keyboard-devices">
-          &quot;r&quot; to restart the game.
-        </li>
-        <li class="small-warning keyboard-devices">
-          &quot;m&quot; to mute ot unmute the game.
         </li>
       </ul>
       <div class="score-container">
@@ -68,10 +59,10 @@
       <div id="canvas-container"></div>
       <!-- ############################################################ Where the canvas goes -->
       <div class="buttons">
-        <button class="btn restart-btn" id="restart-btn">Restart (R)</button>
+        <button class="btn restart-btn" id="restart-btn" title="Press 'R' to restart the game">Restart <span class="keyboard-devices-inline">(R)</span></button>
         <div>
-          <button class="btn mute-btn" id="mute-btn"></button>
-          <button class="btn pause-btn" id="pause-btn"></button>
+          <button class="btn mute-btn" id="mute-btn" title="Press 'M' to mute/unmute the game"></button>
+          <button class="btn pause-btn" id="pause-btn" title="Press 'P' to pause/resume the game"></button>
         </div>
       </div>
       
