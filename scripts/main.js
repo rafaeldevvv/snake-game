@@ -333,25 +333,83 @@ class View {
     this.canvasWidth = state.boundaries.x;
     this.canvasHeight = state.boundaries.y;
 
-    this.createCanvas();
-    this.getReferences();
-    this.registerEventHandlers();
-    this.init(state);
+    this.#createCanvas();
+    this.#getReferences();
+    this.#registerEventHandlers();
+    this.#init(state);
   }
 
-  init(state) {
-    this.drawBackground();
+  syncState(state) {
+    // continue to update the view appropriately
+    this.#drawBackground();
+    if (state.fruit) this.#drawFruit(state.fruit);
+    this.#drawSnake(state.snake);
+
+    if (state.score !== this.state.score) {
+      this.setScore(state.score);
+    }
+    if (state.score > state.bestScore) {
+      this.setBestScore(state.score);
+    }
+
+    this.state = state;
+  }
+
+  setScore(newScore) {
+    this.scoreDOM.textContent = "Score: " + newScore;
+  }
+
+  setBestScore(newBestScore) {
+    this.bestScoreDOM.textContent = "Best Score: " + newBestScore;
+  }
+
+  syncMuted(muted) {
+    const m = `<span class="keyboard-devices-inline">(M)</span>`;
+
+    if (muted) {
+      this.muteButton.innerHTML = `<i class="fa-solid fa-volume-xmark"></i> ${m}`;
+    } else {
+      this.muteButton.innerHTML = `<i class="fa-solid fa-volume-high"></i> ${m}`;
+    }
+  }
+
+  syncPaused(paused) {
+    const p = '<span class="keyboard-devices-inline">(P)</span>';
+
+    if (paused) {
+      this.pauseBtn.innerHTML = `<i class="fa-solid fa-play"></i> ${p}`;
+    } else {
+      this.pauseBtn.innerHTML = `<i class="fa-solid fa-pause"></i> ${p}`;
+    }
+  }
+
+  showFinalMessage() {
+    this.finalMessageContainer.appendChild(
+      elt(
+        "div",
+        { className: "final-message-container" },
+        elt("p", { className: "message" }, "Game Over")
+      )
+    );
+  }
+
+  clearFinalMessage() {
+    this.finalMessageContainer.textContent = "";
+  }
+
+  #init(state) {
+    this.#drawBackground();
 
     if (snakeSprite.complete) {
-      this.drawSnake(state.snake);
+      this.#drawSnake(state.snake);
     } else {
-      snakeSprite.onload = () => (this.drawSnake(state.snake));
+      snakeSprite.onload = () => this.#drawSnake(state.snake);
     }
 
     if (fruitsSprite.complete) {
-      this.drawFruit(state.fruit);
+      this.#drawFruit(state.fruit);
     } else {
-      fruitsSprite.onload = () => (this.drawFruit(state.fruit));
+      fruitsSprite.onload = () => this.#drawFruit(state.fruit);
     }
 
     this.syncMuted(state.muted);
@@ -360,14 +418,14 @@ class View {
     this.setScore(state.score);
   }
 
-  getReferences() {
+  #getReferences() {
     this.scoreDOM = $("#current-score");
     this.bestScoreDOM = $("#best-score");
     this.muteButton = $("#mute-btn");
     this.pauseBtn = $("#pause-btn");
   }
 
-  registerEventHandlers() {
+  #registerEventHandlers() {
     const controller = this.controller;
 
     // for keyboard
@@ -399,7 +457,7 @@ class View {
     });
   }
 
-  createCanvas() {
+  #createCanvas() {
     const canvas = elt("canvas", {
       width: this.canvasWidth * scale,
       height: this.canvasHeight * scale,
@@ -419,73 +477,12 @@ class View {
     $("#canvas-container").appendChild(this.canvasContainer);
   }
 
-  syncState(state) {
-    // continue to update the view appropriately
-    this.drawBackground();
-    if(state.fruit) this.drawFruit(state.fruit);
-    this.drawSnake(state.snake);
-
-    if (state.score !== this.state.score) {
-      this.setScore(state.score);
-    } 
-    if (state.score > state.bestScore) {
-      this.setBestScore(state.score);
-    }
-
-    this.state = state;
+  #drawSnake(snake) {
+    this.#drawSnakeHead(snake.head);
+    this.#drawSnakeTail(snake.tail);
   }
 
-  setScore(newScore) {
-    this.scoreDOM.textContent = "Score: " + newScore;
-  }
-
-  setBestScore(newBestScore) {
-    this.bestScoreDOM.textContent = "Best Score: " + newBestScore;
-  }
-
-  drawSnake(snake) {
-    this.drawSnakeHead(snake.head);
-    this.drawSnakeTail(snake.tail);
-  }
-
-  syncMuted(muted) {
-    const m = `<span class="keyboard-devices-inline">(M)</span>`;
-    
-    if (muted) {
-      this.muteButton.innerHTML = `<i class="fa-solid fa-volume-xmark"></i> ${m}`;
-    } else {
-      this.muteButton.innerHTML = `<i class="fa-solid fa-volume-high"></i> ${m}`;
-    }
-  }
-
-  syncPaused(paused) {
-    const p = '<span class="keyboard-devices-inline">(P)</span>';
-
-    if (paused) {
-      this.pauseBtn.innerHTML = `<i class="fa-solid fa-play"></i> ${p}`;
-    } else {
-      this.pauseBtn.innerHTML = `<i class="fa-solid fa-pause"></i> ${p}`;
-    }
-  }
-
-  showFinalMessage() {
-    this.finalMessageContainer.appendChild(
-      elt(
-        "div",
-        { className: "final-message-container" },
-        elt("p", { className: "message" }, "Game Over"),
-      )
-    );
-  }
-
-  restartGame(state) {
-    this.finalMessageContainer.textContent = "";
-    this.drawBackground();
-    this.syncState(state);
-  }
-
-
-  drawBackground() {
+  #drawBackground() {
     drawChessBackground(
       this.canvasContext,
       this.canvasWidth,
@@ -496,7 +493,7 @@ class View {
     );
   }
 
-  drawFruit(fruit) {
+  #drawFruit(fruit) {
     const { x, y } = fruit.position;
 
     const scaledOsc = fruit.osc * scale;
@@ -514,7 +511,7 @@ class View {
     );
   }
 
-  drawSnakeHead(head) {
+  #drawSnakeHead(head) {
     const x = Math.floor(head.position.x) * scale,
       y = Math.floor(head.position.y) * scale;
 
@@ -542,7 +539,7 @@ class View {
     this.canvasContext.restore();
   }
 
-  drawSnakeTail(tail) {
+  #drawSnakeTail(tail) {
     if (tail.length === 0) return;
 
     for (let i = 0; i < tail.length - 1; i++) {
@@ -640,7 +637,8 @@ class Controller {
 
   restartGame() {
     this.state = State.start(mapBoundaries, this.state.muted);
-    this.view.restartGame(this.state);
+    this.view.clearFinalMessage();
+    this.view.syncState(this.state);
     this.scheduledDirectionChanges = [];
     this.isGameRunning = false;
     cancelAnimationFrame(currentAnimation);
@@ -661,7 +659,6 @@ class Controller {
   handleArrowPress(e) {
     if (!this.isGameRunning) {
       this.isGameRunning = true;
-      this.isGamePaused = false;
       this.view.syncPaused(false);
       runAnimation((timeStep) => this.runner(timeStep));
     }
@@ -687,6 +684,8 @@ class Controller {
   }
 
   handlePauseGame() {
+    if (!this.isGameRunning || this.state.status === "lost") return;
+
     this.isGamePaused = !this.isGamePaused;
     this.view.syncPaused(this.isGamePaused);
   }
@@ -694,10 +693,7 @@ class Controller {
   runner(timeStep) {
     if (this.isGamePaused) return true;
 
-    this.state = this.state.update(
-      timeStep,
-      this.scheduledDirectionChanges
-    );
+    this.state = this.state.update(timeStep, this.scheduledDirectionChanges);
 
     if (this.state.status === "playing") {
       this.view.syncState(this.state);
