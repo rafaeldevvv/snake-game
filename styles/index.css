@@ -80,14 +80,14 @@ main#game-container {
    padding-inline: min(1rem, 4vw);
 }
 
-.warnings {
+ul#warnings {
    margin-bottom: .85rem;
    list-style-type: square;
    padding-left: 1rem;
    font-size: .8rem;
 }
 
-.score-container {
+#score-container {
    display: flex;
    justify-content: space-between;
    margin-bottom: .5rem;
@@ -114,15 +114,13 @@ main#game-container {
 
 .final-message-container {
    position: absolute;
-   left: 50%;
    top: 50%;
-   transform: translate(-50%, -50%);
+   transform: translateY(-50%);
    background-color: rgba(0, 0, 0, 0.3);
-   border-radius: .5rem;
    color: white;
    text-align: center;
-   padding: .8rem 2.5rem;
-   width: max-content;
+   padding: .8rem 2.5rem .5rem;
+   width: 100%;
 }
 
 .message {
@@ -130,6 +128,7 @@ main#game-container {
    font-size: 2rem;
    font-weight: 800;
    margin-bottom: .5rem;
+   line-height: .9;
 }
 
 #buttons-below-canvas {
@@ -159,7 +158,7 @@ main#game-container {
    position: relative;
    padding: .5rem .6rem;
    aspect-ratio: 1;
-   width: 70px;
+   width: 75px;
    border: 1px solid white;
    color: white;
    border-radius: .2rem;
@@ -214,9 +213,5 @@ button[data-direction="down"] {
 
    .keyboard-devices-block {
       display: block;
-   }
-
-   li.keyboard-devices {
-      display: list-item;
    }
 }

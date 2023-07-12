@@ -157,9 +157,6 @@ class Snake {
   }
 }
 
-const eatingSoundEffect = new Audio();
-eatingSoundEffect.src = "./audio/eating.mp3";
-
 const maxFruitOsc = 0.2;
 
 class Fruit {
@@ -196,11 +193,6 @@ class Fruit {
     const snake = state.snake;
     const longerSnake = snake.grow();
 
-    if (!state.muted) {
-      eatingSoundEffect.currentTime = 0; // reset the audio if it is playing
-      eatingSoundEffect.play();
-    }
-
     return new State(
       longerSnake,
       null,
@@ -208,7 +200,6 @@ class Fruit {
       state.status,
       state.boundaries,
       state.bestScore,
-      state.muted
     );
   }
 }
@@ -225,17 +216,16 @@ function getRandomFruit(limitX, limitY) {
 }
 
 class State {
-  constructor(snake, fruit, score, status, boundaries, bestScore, muted) {
+  constructor(snake, fruit, score, status, boundaries, bestScore) {
     this.snake = snake;
     this.fruit = fruit;
     this.score = score;
     this.status = status;
     this.boundaries = boundaries;
     this.bestScore = bestScore;
-    this.muted = muted;
   }
 
-  static start(boundaries, muted) {
+  static start(boundaries) {
     const firstTail = [
       {
         position: new Vec(1, boundaries.y / 2),
@@ -267,7 +257,6 @@ class State {
       "playing",
       boundaries,
       localStorage.getItem("best-score") || 0,
-      muted
     );
   }
 
@@ -295,8 +284,7 @@ class State {
       this.score,
       this.status,
       this.boundaries,
-      this.bestScore,
-      this.muted
+      this.bestScore
     );
 
     // wall collision or tail collision
@@ -338,7 +326,7 @@ class View {
     this.#createCanvas();
     this.#getReferences();
     this.#registerEventHandlers();
-    this.#init(state);
+    this.#init();
   }
 
   syncState(state) {
@@ -367,7 +355,7 @@ class View {
 
   syncMuted(muted) {
     const m = `<span class="keyboard-devices-inline">(M)</span>`;
-    const volumeIcon = muted ? "xmark" : "high";
+    const volumeIcon = !!muted ? "xmark" : "high";
 
     this.muteButton.innerHTML = `<i class="fa-solid fa-volume-${volumeIcon}"></i> ${m}`;
   }
@@ -393,7 +381,10 @@ class View {
     this.finalMessageContainer.textContent = "";
   }
 
-  #init(state) {
+  #init() {
+    const state = this.state;
+    const controller = this.controller;
+
     this.#drawBackground();
 
     if (snakeSprite.complete) {
@@ -408,8 +399,8 @@ class View {
       fruitsSprite.onload = () => this.#drawFruit(state.fruit);
     }
 
-    this.syncMuted(state.muted);
-    this.syncPaused(this.controller.isGamePaused);
+    this.syncMuted(controller.isGameMuted);
+    this.syncPaused(controller.isGamePaused);
     this.setBestScore(state.bestScore);
     this.setScore(state.score);
   }
@@ -629,10 +620,11 @@ class Controller {
     this.scheduledDirectionChanges = [];
     this.isGamePaused = false;
     this.isGameRunning = false;
+    this.isGameMuted = true;
   }
 
   restartGame() {
-    this.state = State.start(mapBoundaries, this.state.muted);
+    this.state = State.start(mapBoundaries);
     this.view.clearFinalMessage();
     this.view.syncState(this.state);
     this.scheduledDirectionChanges = [];
@@ -641,11 +633,10 @@ class Controller {
   }
 
   handleMuteGame() {
-    const nextBoolean = !this.state.muted;
-    this.state.muted = nextBoolean;
-    this.view.syncMuted(nextBoolean);
+    this.isGameMuted = !this.isGameMuted;
+    this.view.syncMuted(this.isGameMuted);
 
-    if (!nextBoolean) {
+    if (this.isGameMuted) {
       backgroundSong.play();
     } else {
       backgroundSong.pause();

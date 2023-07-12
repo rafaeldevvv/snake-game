@@ -971,11 +971,12 @@ I put some extra metadata that I just learned about in the HTML head:
 - [Eloquent JS](https://eloquentjavascript.net/) - Game Project Reference
 - [Epidemic Sound](https://www.epidemicsound.com/) - I used it to get the sound effect.
 - [Free SVG](https://freesvg.org/) - I got some reference images from here.
+- [Open Game Art](https://opengameart.org) - I got the background sound from here.
 - [pixilart](https://www.pixilart.com/) - I used it to draw the fruits and the snake. I first tried to draw the fruits with PhotoShop, but my computer couldn't keep VS Code and PhotoShop open at the same time.
+- [MDN Private Class Fields](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Classes/Private_class_fields) - I saw the compatibility for private class fields
 
 ### Sound Effects
 
-- [Eating Sound Effect](https://www.epidemicsound.com/track/ndQZD8ofQt/)
 - [Background](https://opengameart.org/content/platformer-game-music-pack)
 
 ## Author
