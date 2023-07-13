@@ -157,6 +157,7 @@ class Snake {
   }
 }
 
+const eatingSoundEffect = new Audio("./audio/eating.m4a");
 const maxFruitOsc = 0.2;
 
 class Fruit {
@@ -193,6 +194,11 @@ class Fruit {
     const snake = state.snake;
     const longerSnake = snake.grow();
 
+    if (!state.isGameMuted) {
+      eatingSoundEffect.currentTime = 0;
+      eatingSoundEffect.play();
+    }
+
     return new State(
       longerSnake,
       null,
@@ -200,6 +206,7 @@ class Fruit {
       state.status,
       state.boundaries,
       state.bestScore,
+      state.isGameMuted
     );
   }
 }
@@ -216,16 +223,17 @@ function getRandomFruit(limitX, limitY) {
 }
 
 class State {
-  constructor(snake, fruit, score, status, boundaries, bestScore) {
+  constructor(snake, fruit, score, status, boundaries, bestScore, isGameMuted) {
     this.snake = snake;
     this.fruit = fruit;
     this.score = score;
     this.status = status;
     this.boundaries = boundaries;
     this.bestScore = bestScore;
+    this.isGameMuted = isGameMuted;
   }
 
-  static start(boundaries) {
+  static start(boundaries, isGameMuted) {
     const firstTail = [
       {
         position: new Vec(1, boundaries.y / 2),
@@ -257,6 +265,7 @@ class State {
       "playing",
       boundaries,
       localStorage.getItem("best-score") || 0,
+      isGameMuted
     );
   }
 
@@ -284,7 +293,8 @@ class State {
       this.score,
       this.status,
       this.boundaries,
-      this.bestScore
+      this.bestScore,
+      this.isGameMuted
     );
 
     // wall collision or tail collision
@@ -299,8 +309,8 @@ class State {
     }
 
     // fruit collision
-    if (fruit !== null && overlap(fruit, newSnake.head)) {
-      newState = this.fruit.collide(newState);
+    if (!!fruit && overlap(fruit, newSnake.head)) {
+      newState = fruit.collide(newState);
     }
 
     // return next state
@@ -399,7 +409,7 @@ class View {
       fruitsSprite.onload = () => this.#drawFruit(state.fruit);
     }
 
-    this.syncMuted(controller.isGameMuted);
+    this.syncMuted(state.isGameMuted);
     this.syncPaused(controller.isGamePaused);
     this.setBestScore(state.bestScore);
     this.setScore(state.score);
@@ -613,33 +623,35 @@ class View {
 const directions = ["down", "up", "left", "right"];
 
 class Controller {
+  #scheduledDirectionChanges = [];
+
   init(state, view) {
     this.state = state;
     this.view = view;
 
-    this.scheduledDirectionChanges = [];
     this.isGamePaused = false;
     this.isGameRunning = false;
-    this.isGameMuted = true;
   }
 
   restartGame() {
-    this.state = State.start(mapBoundaries);
+    this.state = State.start(mapBoundaries, this.state.isGameMuted);
     this.view.clearFinalMessage();
     this.view.syncState(this.state);
-    this.scheduledDirectionChanges = [];
+    this.#scheduledDirectionChanges = [];
     this.isGameRunning = false;
     cancelAnimationFrame(currentAnimation);
   }
 
   handleMuteGame() {
-    this.isGameMuted = !this.isGameMuted;
-    this.view.syncMuted(this.isGameMuted);
+    this.state.isGameMuted = !this.state.isGameMuted;
+    const nextIsMuted = this.state.isGameMuted;
 
-    if (this.isGameMuted) {
-      backgroundSong.play();
-    } else {
+    this.view.syncMuted(nextIsMuted);
+
+    if (nextIsMuted) {
       backgroundSong.pause();
+    } else {
+      backgroundSong.play();
     }
   }
 
@@ -665,8 +677,8 @@ class Controller {
 
   scheduleDirectionChange(direction) {
     const axis = getAxis(direction);
-    if (this.scheduledDirectionChanges.every((d) => getAxis(d) !== axis)) {
-      this.scheduledDirectionChanges.push(direction);
+    if (this.#scheduledDirectionChanges.every((d) => getAxis(d) !== axis)) {
+      this.#scheduledDirectionChanges.push(direction);
     }
   }
 
@@ -680,7 +692,7 @@ class Controller {
   runner(timeStep) {
     if (this.isGamePaused) return true;
 
-    this.state = this.state.update(timeStep, this.scheduledDirectionChanges);
+    this.state = this.state.update(timeStep, this.#scheduledDirectionChanges);
 
     if (this.state.status === "playing") {
       this.view.syncState(this.state);
