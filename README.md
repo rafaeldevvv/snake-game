@@ -19,9 +19,9 @@ It is an implementation of the classic snake game. Try to eat as much food as yo
     - [Controller](#controller)
   - [Virtual Controls](#virtual-controls)
   - [Refactoring](#refactoring)
+  - [Sound Effects](#sound-effects)
   - [Extra](#extra)
   - [Useful resources](#useful-resources)
-  - [Sound Effects](#sound-effects)
 - [Author](#author)
 - [License](#license)
 
@@ -34,7 +34,6 @@ I used the MVC(Model-View-Controller) design pattern, which I read about in some
 Sorry for the lengthy `READNE.md` file - I wrote almost everything. I wanted to include more, but it was already huge enough and, I don't know about you but, I prefer concise text. The shorter the better!
 
 ### Screenshots
-
 ![](./screenshot.png)
 
 ### Links
@@ -72,7 +71,7 @@ Well, I kind of stole the logic for this game from the [game project](https://el
 
 So I would have the classes representing the actors of the game(snake and food), the class for the state and the class to display the state.
 
-I also used a lot of helper functions from that chapter - well, they are, in fact, very helpful.
+I also used some helper functions from that chapter - well, they are, in fact, very helpful.
 
 ### State
 
@@ -129,43 +128,48 @@ class State {
     );
   }
 
-  update(time, keys) {
+  update(time, scheduledDirectionChanges) {
     // update snake
-    const newSnake = this.snake.update(time, keys);
+    const newSnake = this.snake.update(timeStep, scheduledDirectionChanges);
 
-    // wall collision
-    const snakeX = newSnake.head.position.x;
-    const snakeY = newSnake.head.position.y;
+    // making the next if statement easier to read
+    const snakeHeadX = newSnake.head.position.x;
+    const snakeHeadY = newSnake.head.position.y;
     const limitX = this.boundaries.x;
     const limitY = this.boundaries.y;
 
-    if (snakeX >= limitX || snakeY >= limitY || snakeX < 0 || snakeY < 0) {
-      return new State(
-        newSnake,
-        this.food,
-        this.score,
-        "lost",
-        this.boundaries
-      );
+    let fruit = this.fruit;
+
+    if (fruit) {
+      fruit = this.fruit.update(timeStep);
+    } else {
+      fruit = getRandomFruit(this.boundaries.x, this.boundaries.y);
     }
 
-    // snake collision
-    if (this.snake.tail.some((part) => overlap(part, newSnake.head))) {
-      return new State(
-        newSnake,
-        this.food,
-        this.score,
-        "lost",
-        this.boundaries
-      );
+    let newState = new State(
+      newSnake,
+      fruit,
+      this.score,
+      this.status,
+      this.boundaries,
+      this.bestScore,
+      this.isGameMuted
+    );
+
+    // wall collision or tail collision
+    if (
+      snakeHeadX >= limitX ||
+      snakeHeadY >= limitY ||
+      snakeHeadX < 0 ||
+      snakeHeadY < 0 ||
+      this.snake.tail.some((part) => overlap(part, newSnake.head))
+    ) {
+      newState.status = "lost";
     }
 
     // fruit collision
-    let newState = this;
-    for (const piece of this.food) {
-      if (overlap(piece, newSnake)) {
-        newState = piece.collide(newState);
-      }
+    if (!!fruit && overlap(fruit, newSnake.head)) {
+      newState = fruit.collide(newState);
     }
 
     // return next state
@@ -1019,6 +1023,12 @@ And I used this feature of `@media` to see if the device used keyboard
 }
 ```
 
+### Sound Effects
+
+I made the eating sound effect myself by recording myself biting an apple - yeah, I felt like a sound engineer doing it.
+
+I got the background from [Open Game Art](https://opengameart.org/content/platformer-game-music-pack).
+
 ### Extra
 
 I just discovered this shorthand to round a number down:
@@ -1078,12 +1088,6 @@ I put some extra metadata that I just learned about in the HTML head:
 - [Open Game Art](https://opengameart.org) - I got the background sound from here.
 - [pixilart](https://www.pixilart.com/) - I used it to draw the fruits and the snake. I first tried to draw the fruits with PhotoShop, but my computer couldn't keep VS Code and PhotoShop open at the same time.
 - [MDN Private Class Fields](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Classes/Private_class_fields) - I saw the compatibility for private class fields
-
-### Sound Effects
-
-I made the eating sound effect myself by recording myself biting an apple - yeah, I felt like a sound engineer doing it.
-
-- [Background](https://opengameart.org/content/platformer-game-music-pack)
 
 ## Author
 
