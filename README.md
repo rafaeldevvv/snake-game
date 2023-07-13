@@ -9,12 +9,14 @@ It is an implementation of the classic snake game. Try to eat as much food as yo
   - [Links](#links)
 - [My process](#my-process)
   - [Built with](#built-with)
+  - [Features](#features)
   - [Thinking](#thinking)
   - [State](#state)
   - [Classes](#classes)
     - [Snake](#snake)
     - [Fruit](#fruit)
     - [View](#view)
+    - [Controller](#controller)
   - [Virtual Controls](#virtual-controls)
   - [Refactoring](#refactoring)
   - [Extra](#extra)
@@ -25,6 +27,12 @@ It is an implementation of the classic snake game. Try to eat as much food as yo
 
 ## Overview
 
+This was the most enjoyable project I've had so far. It was quite hard to solve some problems and, well, I realized that making games requires a lot of creativity and thinking. I want to try it someday because I kind of liked it.
+
+I used the MVC(Model-View-Controller) design pattern, which I read about in some book, to implement the game. It was a good experience. Whenever I needed to make changes I knew which component should be changed and how to change it. This separation of concerns made my code highly maintainable and flexible. 
+
+Sorry for the lengthy `READNE.md` file - I wrote almost everything. I wanted to include more, but it was already huge enough and, I don't know about you but, I prefer concise text. The shorter the better!
+
 ### Screenshots
 
 ![](./screenshot.png)
@@ -33,8 +41,6 @@ It is an implementation of the classic snake game. Try to eat as much food as yo
 
 - [Repository](https://github.com/rafaeldevvv/snake-game)
 - [Live site](https://rafaeldevvv.github.io/snake-game/)
-
-### Links
 
 ## My Process
 
@@ -624,7 +630,7 @@ drawFruit(fruit) {
 }
 ```
 
-I have to subtract half the scaled oscillation to make it stay in the center of the square and sum the normal scale with the scaled oscillation when passing the size of the fruit to the `drawImage()` method.
+I have to subtract half the scaled oscillation from the scale positions to make it stay in the center of the square and sum the normal scale with the scaled oscillation when passing the size of the fruit to the `drawImage()` method.
 
 #### View
 
@@ -739,6 +745,104 @@ class View {
   drawSnakeHead(snake) {}
 
   drawSnakeTail(tail) {}
+}
+```
+
+### Controller
+
+This component controls part of the game's logic and the synchronization between the State and the View:
+
+```js
+class Controller {
+  #scheduledDirectionChanges = [];
+
+  init(state, view) {
+    this.state = state;
+    this.view = view;
+
+    this.isGamePaused = false;
+    this.isGameRunning = false;
+  }
+
+  restartGame() {
+    this.state = State.start(mapBoundaries, this.state.isGameMuted);
+    this.view.clearFinalMessage();
+    this.view.syncState(this.state);
+    this.#scheduledDirectionChanges = [];
+    this.isGameRunning = false;
+    cancelAnimationFrame(currentAnimation);
+  }
+
+  handleMuteGame() {
+    this.state.isGameMuted = !this.state.isGameMuted;
+    const nextIsMuted = this.state.isGameMuted;
+
+    this.view.syncMuted(nextIsMuted);
+
+    if (nextIsMuted) {
+      backgroundSong.pause();
+    } else {
+      backgroundSong.play();
+    }
+  }
+
+  handleArrowPress(e) {
+    if (!this.isGameRunning) {
+      this.isGameRunning = true;
+      this.view.syncPaused(false);
+      runAnimation((timeStep) => this.runner(timeStep));
+    }
+
+    if (this.isGamePaused) return;
+
+    const key = e.key;
+
+    directions.forEach((d) => {
+      const directionRegExp = new RegExp(d, "i");
+
+      if (directionRegExp.test(key)) {
+        this.scheduleDirectionChange(d);
+      }
+    });
+  }
+
+  scheduleDirectionChange(direction) {
+    const axis = getAxis(direction);
+    if (this.#scheduledDirectionChanges.every((d) => getAxis(d) !== axis)) {
+      this.#scheduledDirectionChanges.push(direction);
+    }
+  }
+
+  handlePauseGame() {
+    if (!this.isGameRunning || this.state.status === "lost") return;
+
+    this.isGamePaused = !this.isGamePaused;
+    this.view.syncPaused(this.isGamePaused);
+  }
+
+  runner(timeStep) {
+    if (this.isGamePaused) return true;
+
+    this.state = this.state.update(timeStep, this.#scheduledDirectionChanges);
+
+    if (this.state.status === "playing") {
+      this.view.syncState(this.state);
+      return true;
+    } else {
+      this.view.showFinalMessage(this.state.status);
+      this.saveBestScore(this.state.score);
+      return false;
+    }
+  }
+
+  saveBestScore(newBestScore) {
+    const savedBestScore = this.state.bestScore;
+
+    if (savedBestScore < newBestScore) {
+      localStorage.setItem("best-score", newBestScore);
+      this.view.setBestScore(newBestScore);
+    }
+  }
 }
 ```
 
@@ -872,7 +976,7 @@ class View {
 
 ### Virtual Controls
 
-These are implemented in the HTML itself
+These are implemented in the HTML itself and have custom attributes to help with the JavaScript code:
 
 ```html
 <div id="virtual-controls" class="touch-screen-devices">
@@ -976,6 +1080,8 @@ I put some extra metadata that I just learned about in the HTML head:
 - [MDN Private Class Fields](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Classes/Private_class_fields) - I saw the compatibility for private class fields
 
 ### Sound Effects
+
+I made the eating sound effect myself by recording myself biting an apple - yeah, I felt like a sound engineer doing it.
 
 - [Background](https://opengameart.org/content/platformer-game-music-pack)
 

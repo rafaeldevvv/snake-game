@@ -77,7 +77,7 @@ main#game-container {
    width: min-content;
    max-width: 100%;
    margin: 2rem auto 15rem;
-   padding-inline: min(1rem, 4vw);
+   padding-inline: 15px;
 }
 
 ul#warnings {

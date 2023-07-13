@@ -22,7 +22,7 @@ let scale = 20;
 
 // the innerWidth is divided by fourteen to give space to side margin or padding
 if (mapBoundaries.x * scale > innerWidth) {
-  scale = (innerWidth - innerWidth / 14) / mapBoundaries.x;
+  scale = (innerWidth - 30) / mapBoundaries.x; // 30 because the inline padding is also 30
 }
 
 // runAnimation is here because I need to store the current animation frame
@@ -157,7 +157,7 @@ class Snake {
   }
 }
 
-const eatingSoundEffect = new Audio("./audio/eating.m4a");
+const eatingSoundEffect = new Audio("./audio/eating.mp3");
 const maxFruitOsc = 0.2;
 
 class Fruit {
@@ -365,7 +365,7 @@ class View {
 
   syncMuted(muted) {
     const m = `<span class="keyboard-devices-inline">(M)</span>`;
-    const volumeIcon = !!muted ? "xmark" : "high";
+    const volumeIcon = muted ? "xmark" : "high";
 
     this.muteButton.innerHTML = `<i class="fa-solid fa-volume-${volumeIcon}"></i> ${m}`;
   }

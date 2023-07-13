@@ -49,12 +49,12 @@ export function drawChessBackground(
   height,
   color1 = "white",
   color2 = "black",
-  scale
+  squareSide
 ) {
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
       context.fillStyle = (x + y) % 2 === 0 ? color1 : color2;
-      context.fillRect(x * scale, y * scale, scale, scale);
+      context.fillRect(x * squareSide, y * squareSide, squareSide, squareSide);
     }
   }
 }
