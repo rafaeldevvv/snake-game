@@ -303,13 +303,13 @@ class State {
       snakeHeadY >= limitY ||
       snakeHeadX < 0 ||
       snakeHeadY < 0 ||
-      this.snake.tail.some((part) => overlap(part, newSnake.head))
+      newSnake.tail.some((part) => overlap(part, newSnake.head))
     ) {
       newState.status = "lost";
     }
 
     // fruit collision
-    if (!!fruit && overlap(fruit, newSnake.head)) {
+    if (!!fruit && overlap(fruit, newSnake.head) && newState.status !== 'lost') {
       newState = fruit.collide(newState);
     }
 
